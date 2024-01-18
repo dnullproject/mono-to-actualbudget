@@ -8,6 +8,13 @@ let actualApi = require('@actual-app/api');
     password: process.env.ACTUAL_PASSWORD,
   });
 
+  var fs = require('fs');
+  var dir = '.cache';
+
+  if (!fs.existsSync(dir)){
+      fs.mkdirSync(dir);
+  }
+
   await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
   // let from = Math.floor(Date.now() / 1000) - 3600;
   // const dateString = "2024-01-13";
