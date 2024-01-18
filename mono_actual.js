@@ -1,16 +1,19 @@
 // npm install --save @actual-app/api
-let api = require('@actual-app/api');
+let actualApi = require('@actual-app/api');
 
 (async () => {
-  await api.init({
+  await actualApi.init({
     dataDir: '.cache/',
     serverURL: process.env.ACTUAL_URL,
     password: process.env.ACTUAL_PASSWORD,
   });
 
-  await api.downloadBudget(process.env.ACTUAL_SYNC_ID);
+  await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
   // let from = Math.floor(Date.now() / 1000) - 3600;
-  const dateString = "2024-01-13";
+  // const dateString = "2024-01-13";
+  const currentDate = new Date();
+  const dateString = currentDate.toISOString().slice(0, 10);
+  console.log('current date: ' + dateString);
   const date = new Date(dateString);
   const unixTimestamp = date.getTime() / 1000;
 
@@ -18,7 +21,7 @@ let api = require('@actual-app/api');
   const mono_card = process.env.MONO_CARD;
   const mono_url = 'https://api.monobank.ua/';
   const mono_api_token = process.env.MONO_TOKEN;
-  let mono_trans = Array();
+  let mono_data = Array();
   let Transaction = [];
 
 
@@ -34,9 +37,7 @@ let api = require('@actual-app/api');
       }
 
       const data = await response.json();
-      console.log(data);
       const extractedData = data;
-      console.log(extractedData);
 
       return extractedData; // Return the refactored data
     } catch (error) {
@@ -50,8 +51,19 @@ let api = require('@actual-app/api');
     return extractedData;
   }
 
-  mono_trans = await useData(); // Call the function to fetch and use the data
-  console.log(mono_trans); // Now you can use extractedData outside the fetch function
+  async function fetchActualData() {
+    try {
+      // let budget = await api.getBudgetMonth('2024-01');
+      // let accounts = await api.getAccounts()
+      // console.log(accounts);
+      // console.log(trans)
+      let actual_data = await actualApi.getTransactions(actual_card, date);
+      return actual_data
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
 
 
   const example_actual_trans = [{
@@ -61,10 +73,10 @@ let api = require('@actual-app/api');
     account: actual_card,
     // category: '1111',
     amount: -77700,
-    // payee: '333',
+    payee: '333',
     // notes: null,
     date: date,
-    // imported_id: null,
+    imported_id: null,
     // error: null,
     // imported_payee: null,
     // starting_balance_flag: false,
@@ -94,24 +106,47 @@ let api = require('@actual-app/api');
     }
   ];
 
-  // ACTUAL BUDGET
-  // let budget = await api.getBudgetMonth('2024-01');
-  // let accounts = await api.getAccounts()
-  // console.log(accounts);
-  let existing_trans = await api.getTransactions(actual_card, date);
-  // console.log(trans)
-  for (const exp of mono_trans) {
+  async function deduplicate(transaction, actual_data) {
+    let match = false;
+    for (const actual of actual_data) {
+      if (transaction.amount == actual.amount) {
+        if (transaction.payee_name == actual.imported_payee) {
+          console.log('deduplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+          match = true
+        }
+        if (transaction.payee_name == actual.payee) {
+          console.log('deduplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+          match = true
+        }
+      }
+    }
+    return match;
+  }
+
+  actual_data = await fetchActualData();
+  console.log(actual_data);
+  mono_data = await useData();
+  console.log(mono_data);
+
+  for (const exp of mono_data) {
     let create_trans = new Object();
-    console.log(exp);
     create_trans.account = actual_card;
     create_trans.amount = exp.amount;
     create_trans.date = date;
     create_trans.payee_name = exp.description;
-    Transaction.push(create_trans);
+    if (deduplicate(create_trans, actual_data) == false) {
+      console.log('create: amount' + create.amount + ' payee:' + create.payee_name);
+      Transaction.push(create_trans);
+    }
   }
-  console.log(Transaction)
-  let result = await api.addTransactions(actual_card, Transaction);
-  console.log(result);
 
-  await api.shutdown();
+  if (Transaction.length > 0) {
+    console.log(Transaction)
+    let result = await actualApi.addTransactions(actual_card, Transaction);
+    console.log(result);
+  } else {
+    console.log('No new data to be added')
+  }
+
+  await actualApi.shutdown();
 })();
