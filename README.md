@@ -16,3 +16,4 @@ needs
 - [ ] run non-root
 - [ ] more that one card
 - [ ] docs
+- [ ] helm/k8s
