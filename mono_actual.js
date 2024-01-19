@@ -16,11 +16,10 @@ let actualApi = require('@actual-app/api');
   }
 
   await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
-  // let from = Math.floor(Date.now() / 1000) - 3600;
-  // const dateString = "2024-01-13";
-  const currentDate = new Date();
-  const dateString = currentDate.toISOString().slice(0, 10);
-  console.log('current date: ' + dateString);
+  const yesterday = new Date(today.getTime() - 86400000);
+  const dateString = yesterday.toISOString().slice(0, 10);
+  console.log('Sync starting: ' + dateString);
+
   const date = new Date(dateString);
   const unixTimestamp = date.getTime() / 1000;
 
@@ -28,6 +27,7 @@ let actualApi = require('@actual-app/api');
   const mono_card = process.env.MONO_CARD;
   const mono_url = 'https://api.monobank.ua/';
   const mono_api_token = process.env.MONO_TOKEN;
+
   let mono_data = Array();
   let Transaction = [];
 
