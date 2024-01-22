@@ -18,7 +18,7 @@ let actualApi = require('@actual-app/api');
   await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
   const today = new Date();
 
-  const yesterday = new Date(today.getTime() - 86400000 * process.env.DAYS_TO_SYNC);
+  const yesterday = new Date(today.getTime() - 86400000 * parseInt(process.env.DAYS_TO_SYNC));
   const dateString = yesterday.toISOString().slice(0, 10);
   console.log('Sync starting: ' + dateString);
 
