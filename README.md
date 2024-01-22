@@ -10,6 +10,12 @@ Mainly, this is used for personal purposes -
 but feel free to adjust everything under your
 needs
 
+## Configure
+
+### Deduplication
+
+For deduplication to take place you should not Hide decimals (Settings/Formatting)
+
 ## TODO
 
 - [ ] better codebase

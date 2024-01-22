@@ -11,12 +11,14 @@ let actualApi = require('@actual-app/api');
   var fs = require('fs');
   var dir = '.cache';
 
-  if (!fs.existsSync(dir)){
-      fs.mkdirSync(dir);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir);
   }
 
   await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
-  const yesterday = new Date(today.getTime() - 86400000);
+  const today = new Date();
+
+  const yesterday = new Date(today.getTime() - 86400000 * process.env.DAYS_TO_SYNC);
   const dateString = yesterday.toISOString().slice(0, 10);
   console.log('Sync starting: ' + dateString);
 
@@ -118,15 +120,16 @@ let actualApi = require('@actual-app/api');
     for (const actual of actual_data) {
       if (transaction.amount == actual.amount) {
         if (transaction.payee_name == actual.imported_payee) {
-          console.log('deduplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
-          match = true
+          console.log('duplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+          match = true;
         }
         if (transaction.payee_name == actual.payee) {
-          console.log('deduplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
-          match = true
+          console.log('duplicate:: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+          match = true;
         }
       }
     }
+    // console.log('match:' + match);
     return match;
   }
 
@@ -137,12 +140,19 @@ let actualApi = require('@actual-app/api');
 
   for (const exp of mono_data) {
     let create_trans = new Object();
+    let duplicate = false;
+
     create_trans.account = actual_card;
     create_trans.amount = exp.amount;
     create_trans.date = date;
     create_trans.payee_name = exp.description;
-    if (deduplicate(create_trans, actual_data) == false) {
-      console.log('create: amount' + create.amount + ' payee:' + create.payee_name);
+    duplicate = await deduplicate(create_trans, actual_data);
+    // console.log('duplicate:' + duplicate);
+
+    if (duplicate == true) {
+      console.log('skipping: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+    } else {
+      console.log('create: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
       Transaction.push(create_trans);
     }
   }
@@ -152,7 +162,7 @@ let actualApi = require('@actual-app/api');
     let result = await actualApi.addTransactions(actual_card, Transaction);
     console.log(result);
   } else {
-    console.log('No new data to be added')
+    console.log('No new data to be added: ' + Transaction.length)
   }
 
   await actualApi.shutdown();
