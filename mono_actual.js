@@ -153,7 +153,7 @@ let actualApi = require('@actual-app/api');
       console.log('skipping: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
     } else {
       console.log('create: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-      // Transaction.push(create_trans);
+      Transaction.push(create_trans);
     }
   }
 
