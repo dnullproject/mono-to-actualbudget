@@ -16,14 +16,15 @@ let actualApi = require('@actual-app/api');
   }
 
   await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
-  const today = new Date();
+  const endDate = new Date();
+  const endDateIso = endDate.toISOString().slice(0, 10);
+  const endDateTimestamp = endDate.getTime() / 1000;
 
-  const yesterday = new Date(today.getTime() - 86400000 * parseInt(process.env.DAYS_TO_SYNC));
-  const dateString = yesterday.toISOString().slice(0, 10);
-  console.log('Sync starting: ' + dateString);
+  const startDate = new Date(endDate.getTime() - 86400000 * parseInt(process.env.DAYS_TO_SYNC));
+  const startDateIso = startDate.toISOString().slice(0, 10);
+  const startDateTimestamp = new Date(startDateIso).getTime() / 1000;
 
-  const date = new Date(dateString);
-  const unixTimestamp = date.getTime() / 1000;
+  console.log('Sync: ' + startDateIso + ' ' + endDateIso);
 
   const actual_card = process.env.ACTUAL_CARD;
   const mono_card = process.env.MONO_CARD;
@@ -37,7 +38,7 @@ let actualApi = require('@actual-app/api');
   // MONO
   async function fetchMonoData() {
     try {
-      const response = await fetch(mono_url + '/personal/statement/' + mono_card + '/' + unixTimestamp, {
+      const response = await fetch(mono_url + '/personal/statement/' + mono_card + '/' + startDateTimestamp, {
         headers: { 'X-Token': mono_api_token, },
       });
 
@@ -66,7 +67,7 @@ let actualApi = require('@actual-app/api');
       // let accounts = await api.getAccounts()
       // console.log(accounts);
       // console.log(trans)
-      let actual_data = await actualApi.getTransactions(actual_card, date);
+      let actual_data = await actualApi.getTransactions(actual_card, startDateIso, endDateIso);
       return actual_data
     } catch (error) {
       console.error(error);
@@ -84,7 +85,7 @@ let actualApi = require('@actual-app/api');
     amount: -77700,
     payee: '333',
     // notes: null,
-    date: date,
+    date: startDateIso,
     imported_id: null,
     // error: null,
     // imported_payee: null,
@@ -118,6 +119,7 @@ let actualApi = require('@actual-app/api');
   async function deduplicate(transaction, actual_data) {
     let match = false;
     for (const actual of actual_data) {
+      console.log('transaction date ' + transaction.date)
       if (transaction.amount == actual.amount) {
         if (transaction.payee_name == actual.imported_payee) {
           console.log('duplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
@@ -144,15 +146,15 @@ let actualApi = require('@actual-app/api');
 
     create_trans.account = actual_card;
     create_trans.amount = exp.amount;
-    create_trans.date = date;
+    create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
     create_trans.payee_name = exp.description;
     duplicate = await deduplicate(create_trans, actual_data);
     // console.log('duplicate:' + duplicate);
 
     if (duplicate == true) {
-      console.log('skipping: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+      console.log('skipping date:' + create_trans.date + 'amount:' + create_trans.amount + ' payee:' + create_trans.payee_name);
     } else {
-      console.log('create: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+      console.log('createx date:' + create_trans.date + 'amount:' + create_trans.amount + ' payee:' + create_trans.payee_name);
       Transaction.push(create_trans);
     }
   }
