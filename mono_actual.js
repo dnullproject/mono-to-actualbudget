@@ -119,7 +119,7 @@ let actualApi = require('@actual-app/api');
   async function deduplicate(transaction, actual_data) {
     let match = false;
     for (const actual of actual_data) {
-      console.log('transaction date ' + transaction.date)
+      // console.log('transaction date ' + transaction.date)
       if (transaction.amount == actual.amount) {
         if (transaction.payee_name == actual.imported_payee) {
           console.log('duplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
@@ -152,9 +152,9 @@ let actualApi = require('@actual-app/api');
     // console.log('duplicate:' + duplicate);
 
     if (duplicate == true) {
-      console.log('skipping date:' + create_trans.date + 'amount:' + create_trans.amount + ' payee:' + create_trans.payee_name);
+      console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
     } else {
-      console.log('createx date:' + create_trans.date + 'amount:' + create_trans.amount + ' payee:' + create_trans.payee_name);
+      console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
       Transaction.push(create_trans);
     }
   }
