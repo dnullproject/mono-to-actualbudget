@@ -128,6 +128,7 @@ let actualApi = require('@actual-app/api');
       create_trans.payee_name = exp.description;
 
       const found = actual_data.find((actual) => {
+          console.log("comparing " + JSON.stringify(create_trans) + " with " + JSON.stringify(actual));
           if (create_trans.amount == actual.amount) {
             if (create_trans.payee_name == actual.imported_payee) {
               console.log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
