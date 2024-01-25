@@ -62,7 +62,7 @@ let actualApi = require('@actual-app/api');
       // let accounts = await api.getAccounts()
       // console.log(accounts);
       // console.log(trans)
-      let actual_data = await actualApi.getTransactions(actual_card, startDateIso, endDateIso);
+      let actual_data = await actualApi.getTransactions(actual_card, startDate, endDate);
       return actual_data
     } catch (error) {
       console.error(error);
