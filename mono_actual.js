@@ -121,7 +121,6 @@ let actualApi = require('@actual-app/api');
   if (mono_data && mono_data.length > 0) {
     for (const exp of mono_data) {
       let create_trans = new Object();
-      let duplicate = false;
 
       create_trans.account = actual_card;
       create_trans.amount = exp.amount;
@@ -129,13 +128,13 @@ let actualApi = require('@actual-app/api');
       create_trans.payee_name = exp.description;
 
       const found = actual_data.find((actual) => {
-          if (transaction.amount == actual.amount) {
-            if (transaction.payee_name == actual.imported_payee) {
-              console.log('duplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+          if (create_trans.amount == actual.amount) {
+            if (create_trans.payee_name == actual.imported_payee) {
+              console.log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
               return true;
             }
-            if (transaction.payee_name == actual.payee) {
-              console.log('duplicate:: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+            if (create_trans.payee_name == actual.payee) {
+              console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
               return true;
             }
           }
