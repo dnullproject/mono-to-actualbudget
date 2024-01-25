@@ -18,11 +18,13 @@ let actualApi = require('@actual-app/api');
   await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
   const endDate = new Date();
   const endDateIso = endDate.toISOString().slice(0, 10);
-  const endDateTimestamp = endDate.getTime() / 1000;
 
-  const startDate = new Date(endDate.getTime() - 86400000 * parseInt(process.env.DAYS_TO_SYNC));
+  const startDate = new Date();
+  // set date as now - DAYS_TO_SYNC
+  startDate.setDate(endDate.getDate() - parseInt(process.env.DAYS_TO_SYNC));
+
   const startDateIso = startDate.toISOString().slice(0, 10);
-  const startDateTimestamp = new Date(startDateIso).getTime() / 1000;
+  const startDateTimestamp = startDate.getTime() / 1000;
 
   console.log('Sync: ' + startDateIso + ' ' + endDateIso);
 
@@ -107,30 +109,11 @@ let actualApi = require('@actual-app/api');
   //   }
   // ];
 
-  async function deduplicate(transaction, actual_data) {
-    let match = false;
-    for (const actual of actual_data) {
-      // console.log('transaction date ' + transaction.date)
-      if (transaction.amount == actual.amount) {
-        if (transaction.payee_name == actual.imported_payee) {
-          console.log('duplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
-          match = true;
-        }
-        if (transaction.payee_name == actual.payee) {
-          console.log('duplicate:: amount' + transaction.amount + ' payee:' + transaction.payee_name);
-          match = true;
-        }
-      }
-    }
-    // console.log('match:' + match);
-    return match;
-  }
-
   actual_data = await fetchActualData();
   console.log("actual data")
   console.log(actual_data);
   console.log("end actual data")
-  mono_data = await fetchActualData();
+  mono_data = await fetchMonoData();
   console.log("mono data")
   console.log(mono_data);
   console.log("end mono data")
@@ -144,10 +127,23 @@ let actualApi = require('@actual-app/api');
       create_trans.amount = exp.amount;
       create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
       create_trans.payee_name = exp.description;
-      duplicate = await deduplicate(create_trans, actual_data);
-      // console.log('duplicate:' + duplicate);
 
-      if (duplicate == true) {
+      const found = actual_data.find((actual) => {
+          if (transaction.amount == actual.amount) {
+            if (transaction.payee_name == actual.imported_payee) {
+              console.log('duplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+              return true;
+            }
+            if (transaction.payee_name == actual.payee) {
+              console.log('duplicate:: amount' + transaction.amount + ' payee:' + transaction.payee_name);
+              return true;
+            }
+          }
+          return false;
+        }
+      );
+      
+      if (found) {
         console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
       } else {
         console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
