@@ -136,26 +136,30 @@ let actualApi = require('@actual-app/api');
   }
 
   actual_data = await fetchActualData();
+  console.log("actual data")
   console.log(actual_data);
   mono_data = await useData();
+  console.log("mono data")
   console.log(mono_data);
 
-  for (const exp of mono_data) {
-    let create_trans = new Object();
-    let duplicate = false;
+  if (mono_data.length > 0) {
+    for (const exp of mono_data) {
+      let create_trans = new Object();
+      let duplicate = false;
 
-    create_trans.account = actual_card;
-    create_trans.amount = exp.amount;
-    create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
-    create_trans.payee_name = exp.description;
-    duplicate = await deduplicate(create_trans, actual_data);
-    // console.log('duplicate:' + duplicate);
+      create_trans.account = actual_card;
+      create_trans.amount = exp.amount;
+      create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
+      create_trans.payee_name = exp.description;
+      duplicate = await deduplicate(create_trans, actual_data);
+      // console.log('duplicate:' + duplicate);
 
-    if (duplicate == true) {
-      console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-    } else {
-      console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-      Transaction.push(create_trans);
+      if (duplicate == true) {
+        console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+      } else {
+        console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+        Transaction.push(create_trans);
+      }
     }
   }
 
