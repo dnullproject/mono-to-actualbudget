@@ -24,7 +24,7 @@ let actualApi = require('@actual-app/api');
   startDate.setDate(endDate.getDate() - parseInt(process.env.DAYS_TO_SYNC));
 
   const startDateIso = startDate.toISOString().slice(0, 10);
-  const startDateTimestamp = startDate.getTime() / 1000;
+  const startDateTimestamp = startDate.getTime();
 
   console.log('Sync: ' + startDateIso + ' ' + endDateIso);
 
@@ -142,7 +142,7 @@ let actualApi = require('@actual-app/api');
           return false;
         }
       );
-      
+
       if (found) {
         console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
       } else {

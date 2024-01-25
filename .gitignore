@@ -1,3 +1,4 @@
 .env
 .envrc
 .cache/
+node_modules
