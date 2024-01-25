@@ -58,8 +58,8 @@ let actualApi = require('@actual-app/api');
 
   async function fetchActualData() {
     try {
-      let budget = await api.getBudgetMonth('2024-01');
-      let accounts = await api.getAccounts()
+      let budget = await actualApi.getBudgetMonth('2024-01');
+      let accounts = await actualApi.getAccounts()
       console.log("1------------------------------");
       console.log(accounts);
       console.log("2------------------------------");
