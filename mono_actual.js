@@ -34,7 +34,6 @@ let actualApi = require('@actual-app/api');
   let mono_data = Array();
   let Transaction = [];
 
-
   // MONO
   async function fetchMonoData() {
     try {
@@ -55,12 +54,6 @@ let actualApi = require('@actual-app/api');
     }
   }
 
-  // Example usage:
-  async function useData() {
-    const extractedData = await fetchMonoData();
-    return extractedData;
-  }
-
   async function fetchActualData() {
     try {
       // let budget = await api.getBudgetMonth('2024-01');
@@ -74,47 +67,45 @@ let actualApi = require('@actual-app/api');
     }
   }
 
-
-
-  const example_actual_trans = [{
-    // is_parent: false,
-    // is_child: false,
-    // parent_id: null,
-    account: actual_card,
-    // category: '1111',
-    amount: -77700,
-    payee: '333',
-    // notes: null,
-    date: startDateIso,
-    imported_id: null,
-    // error: null,
-    // imported_payee: null,
-    // starting_balance_flag: false,
-    // transfer_id: null,
-    // sort_order: 1705047040628,
-    // cleared: false,
-    // reconciled: false,
-    // tombstone: false,
-    // schedule: null,
-    // subtransactions: []
-  }];
-  const example_mono_trans = [
-    {
-      id: 'aaaa',
-      time: 1705091543,
-      description: 'test',
-      mcc: 4829,
-      originalMcc: 4829,
-      amount: -100,
-      operationAmount: -100,
-      currencyCode: 980,
-      commissionRate: 0,
-      cashbackAmount: 0,
-      balance: 536687,
-      hold: true,
-      receiptId: 'xxxxx'
-    }
-  ];
+  // const example_actual_trans = [{
+  //   // is_parent: false,
+  //   // is_child: false,
+  //   // parent_id: null,
+  //   account: actual_card,
+  //   // category: '1111',
+  //   amount: -77700,
+  //   payee: '333',
+  //   // notes: null,
+  //   date: startDateIso,
+  //   imported_id: null,
+  //   // error: null,
+  //   // imported_payee: null,
+  //   // starting_balance_flag: false,
+  //   // transfer_id: null,
+  //   // sort_order: 1705047040628,
+  //   // cleared: false,
+  //   // reconciled: false,
+  //   // tombstone: false,
+  //   // schedule: null,
+  //   // subtransactions: []
+  // }];
+  // const example_mono_trans = [
+  //   {
+  //     id: 'aaaa',
+  //     time: 1705091543,
+  //     description: 'test',
+  //     mcc: 4829,
+  //     originalMcc: 4829,
+  //     amount: -100,
+  //     operationAmount: -100,
+  //     currencyCode: 980,
+  //     commissionRate: 0,
+  //     cashbackAmount: 0,
+  //     balance: 536687,
+  //     hold: true,
+  //     receiptId: 'xxxxx'
+  //   }
+  // ];
 
   async function deduplicate(transaction, actual_data) {
     let match = false;
@@ -138,11 +129,13 @@ let actualApi = require('@actual-app/api');
   actual_data = await fetchActualData();
   console.log("actual data")
   console.log(actual_data);
-  mono_data = await useData();
+  console.log("end actual data")
+  mono_data = await fetchActualData();
   console.log("mono data")
   console.log(mono_data);
+  console.log("end mono data")
 
-  if (mono_data.length > 0) {
+  if (mono_data && mono_data.length > 0) {
     for (const exp of mono_data) {
       let create_trans = new Object();
       let duplicate = false;
@@ -164,7 +157,9 @@ let actualApi = require('@actual-app/api');
   }
 
   if (Transaction.length > 0) {
+    console.log("transactions")
     console.log(Transaction)
+    console.log("end transactions")
     let result = await actualApi.addTransactions(actual_card, Transaction);
     console.log(result);
   } else {
