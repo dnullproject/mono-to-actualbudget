@@ -56,7 +56,7 @@ let actualApi = require('@actual-app/api');
 
   async function fetchActualData() {
     try {
-      let actual_data = actualApi.runQuery(
+      let actual_data = await actualApi.runQuery(
           actualApi.q('transactions')
                   .filter({
                     date: [
@@ -66,7 +66,6 @@ let actualApi = require('@actual-app/api');
                   })
                   .select('*')
         );
-        console.log(actual_data);
       // let actual_data = await actualApi.getTransactions(actual_card, startDateIso, endDateIso);
       return actual_data
     } catch (error) {
