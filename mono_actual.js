@@ -66,8 +66,35 @@ let actualApi = require('@actual-app/api');
                   })
                   .select('*')
         );
-      // let actual_data = await actualApi.getTransactions(actual_card, startDateIso, endDateIso);
-      return actual_data
+      // actual_data structure
+      // const actual_data = {
+      //   data: [
+      //     {
+      //       id: '8eb6241f-3d36-48aa-aab6-c2c8e',
+      //       is_parent: false,
+      //       is_child: false,
+      //       parent_id: null,
+      //       account: null,
+      //       category: null,
+      //       amount: -15200,
+      //       payee: '13c21c0a-284a-4689-b4',
+      //       notes: null,
+      //       date: '2024-01-35',
+      //       imported_id: null,
+      //       error: null,
+      //       imported_payee: '...',
+      //       starting_balance_flag: false,
+      //       transfer_id: null,
+      //       sort_order: 1706225650763,
+      //       cleared: true,
+      //       reconciled: false,
+      //       tombstone: false,
+      //       schedule: null
+      //     },
+      //   ],
+      //   dependencies: [ 'transactions', 'accounts', 'categories', 'payees', 'schedules' ]
+      // }
+      return actual_data.data
     } catch (error) {
       console.error(error);
     }
