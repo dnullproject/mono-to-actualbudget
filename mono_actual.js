@@ -29,9 +29,9 @@ function sleep(ms) {
 
 (async () => {
   // MONO
-  async function fetchMonoData(startDateTimestamp) {
+  async function fetchMonoData(startDateTimestamp, endDateTimestamp) {
     try {
-      const response = await fetch(MONO_URL + '/personal/statement/' + process.env.MONO_CARD + '/' + startDateTimestamp, {
+      const response = await fetch(MONO_URL + '/personal/statement/' + process.env.MONO_CARD + '/' + startDateTimestamp + '/' + endDateTimestamp, {
         headers: { 'X-Token': process.env.MONO_TOKEN, },
       });
 
@@ -109,6 +109,8 @@ function sleep(ms) {
 
   while (TOTAL_DAYS_SYNC > 0) {
     const endDateIso = endDate.toISOString().slice(0, 10);
+    const endDateTimestamp = endDate.getTime();
+
     // set date as end - DAYS_TO_SYNC
     startDate.setDate(endDate.getDate() - DEFAULT_DAYS_SYNC);
 
