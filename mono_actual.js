@@ -162,11 +162,11 @@ function sleep(ms) {
 
         const found = actual_data.find((actual) => {
             if (create_trans.amount == actual.amount) {
-              if (create_trans.payee_name == actual.imported_payee) {
+              if (create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
                 log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
                 return true;
               }
-              if (create_trans.payee_name == actual.payee) {
+              if (create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
                 log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
                 return true;
               }
