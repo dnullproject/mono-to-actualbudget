@@ -21,6 +21,12 @@ function log(text) {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 (async () => {
   // MONO
   async function fetchMonoData(startDateTimestamp) {
@@ -187,6 +193,8 @@ function log(text) {
 
     endDate = startDate;
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
+
+    await sleep(200);
   }
 
   await actualApi.shutdown();
