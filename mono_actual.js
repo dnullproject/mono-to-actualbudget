@@ -144,7 +144,7 @@ function sleep(ms) {
     log(actual_data);
     log("end actual data")
 
-    const mono_data = await fetchMonoData(startDateTimestamp);
+    const mono_data = await fetchMonoData(startDateTimestamp, endDateTimestamp);
     log("mono data")
     log(mono_data);
     log("end mono data")
