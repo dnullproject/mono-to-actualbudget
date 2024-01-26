@@ -104,8 +104,10 @@ function sleep(ms) {
   await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
 
   let endDate = new Date();
+  endDate.setHours(0, 0, 0, 0);
 
   const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
 
   while (TOTAL_DAYS_SYNC > 0) {
     const endDateIso = endDate.toISOString().slice(0, 10);
@@ -187,7 +189,7 @@ function sleep(ms) {
       log("transactions")
       log(transactions)
       log("end transactions")
-      let result = await actualApi.addTransactions(process.env.ACTUAL_CARD, transactions, {learnCategories: true, runTransfers: true});
+      let result = await actualApi.importTransactions(process.env.ACTUAL_CARD, transactions);
       log(result);
     } else {
       log('No new data to be added: ' + transactions.length)
