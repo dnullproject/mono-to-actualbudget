@@ -185,7 +185,7 @@ function log(text) {
       log('No new data to be added: ' + transactions.length)
     }
 
-    endDate.setDate(startDate.getDate());
+    endDate = startDate;
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
   }
 
