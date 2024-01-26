@@ -1,46 +1,32 @@
 // npm install --save @actual-app/api
-let actualApi = require('@actual-app/api');
+const actualApi = require('@actual-app/api');
 
-(async () => {
-  await actualApi.init({
-    dataDir: '.cache/',
-    serverURL: process.env.ACTUAL_URL,
-    password: process.env.ACTUAL_PASSWORD,
-  });
+const CACHE_DIR_PATH = '.cache/';
+const MONO_URL = 'https://api.monobank.ua/';
+let TOTAL_DAYS_SYNC = parseInt(process.env.DAYS_TO_SYNC);
+const DEFAULT_DAYS_SYNC = TOTAL_DAYS_SYNC < 7 ? TOTAL_DAYS_SYNC : 7;
 
-  var fs = require('fs');
-  var dir = '.cache';
+function create_cache_dir() {
+  const fs = require('fs');
+  const dir = CACHE_DIR_PATH;
 
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir);
   }
+}
 
-  await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
-  const endDate = new Date();
-  const endDateIso = endDate.toISOString().slice(0, 10);
+function log(text) {
+  if (process.env.DEBUG) {
+    console.log(text);
+  }
+}
 
-  const startDate = new Date();
-  // set date as now - DAYS_TO_SYNC
-  startDate.setDate(endDate.getDate() - parseInt(process.env.DAYS_TO_SYNC));
-
-  const startDateIso = startDate.toISOString().slice(0, 10);
-  const startDateTimestamp = startDate.getTime();
-
-  console.log('Sync: ' + startDateIso + ' ' + endDateIso);
-
-  const actual_card = process.env.ACTUAL_CARD;
-  const mono_card = process.env.MONO_CARD;
-  const mono_url = 'https://api.monobank.ua/';
-  const mono_api_token = process.env.MONO_TOKEN;
-
-  let mono_data = Array();
-  let Transaction = [];
-
+(async () => {
   // MONO
-  async function fetchMonoData() {
+  async function fetchMonoData(startDateTimestamp) {
     try {
-      const response = await fetch(mono_url + '/personal/statement/' + mono_card + '/' + startDateTimestamp, {
-        headers: { 'X-Token': mono_api_token, },
+      const response = await fetch(MONO_URL + '/personal/statement/' + process.env.MONO_CARD + '/' + startDateTimestamp, {
+        headers: { 'X-Token': process.env.MONO_TOKEN, },
       });
 
       if (!response.ok) {
@@ -54,9 +40,9 @@ let actualApi = require('@actual-app/api');
     }
   }
 
-  async function fetchActualData() {
+  async function fetchActualData(startDateIso, endDateIso) {
     try {
-      let actual_data = await actualApi.runQuery(
+      const actual_data = await actualApi.runQuery(
           actualApi.q('transactions')
                   .filter({
                     date: [
@@ -100,97 +86,107 @@ let actualApi = require('@actual-app/api');
     }
   }
 
-  // const example_actual_trans = [{
-  //   // is_parent: false,
-  //   // is_child: false,
-  //   // parent_id: null,
-  //   account: actual_card,
-  //   // category: '1111',
-  //   amount: -77700,
-  //   payee: '333',
-  //   // notes: null,
-  //   date: startDateIso,
-  //   imported_id: null,
-  //   // error: null,
-  //   // imported_payee: null,
-  //   // starting_balance_flag: false,
-  //   // transfer_id: null,
-  //   // sort_order: 1705047040628,
-  //   // cleared: false,
-  //   // reconciled: false,
-  //   // tombstone: false,
-  //   // schedule: null,
-  //   // subtransactions: []
-  // }];
-  // const example_mono_trans = [
-  //   {
-  //     id: 'aaaa',
-  //     time: 1705091543,
-  //     description: 'test',
-  //     mcc: 4829,
-  //     originalMcc: 4829,
-  //     amount: -100,
-  //     operationAmount: -100,
-  //     currencyCode: 980,
-  //     commissionRate: 0,
-  //     cashbackAmount: 0,
-  //     balance: 536687,
-  //     hold: true,
-  //     receiptId: 'xxxxx'
-  //   }
-  // ];
+  // START
+  create_cache_dir();
 
-  actual_data = await fetchActualData();
-  console.log("actual data")
-  console.log(actual_data);
-  console.log("end actual data")
-  mono_data = await fetchMonoData();
-  console.log("mono data")
-  console.log(mono_data);
-  console.log("end mono data")
+  await actualApi.init({
+    dataDir: CACHE_DIR_PATH,
+    serverURL: process.env.ACTUAL_URL,
+    password: process.env.ACTUAL_PASSWORD,
+  });
 
-  if (mono_data && mono_data.length > 0) {
-    for (const exp of mono_data) {
-      let create_trans = new Object();
+  await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
 
-      create_trans.account = actual_card;
-      create_trans.amount = exp.amount;
-      create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
-      create_trans.payee_name = exp.description;
+  let endDate = new Date();
 
-      const found = actual_data.find((actual) => {
-          console.log("comparing " + JSON.stringify(create_trans) + " with " + JSON.stringify(actual));
-          if (create_trans.amount == actual.amount) {
-            if (create_trans.payee_name == actual.imported_payee) {
-              console.log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-              return true;
+  const startDate = new Date();
+
+  while (TOTAL_DAYS_SYNC > 0) {
+    const endDateIso = endDate.toISOString().slice(0, 10);
+    // set date as end - DAYS_TO_SYNC
+    startDate.setDate(endDate.getDate() - DEFAULT_DAYS_SYNC);
+
+    const startDateIso = startDate.toISOString().slice(0, 10);
+    const startDateTimestamp = startDate.getTime();
+
+    console.log('Sync: ' + startDateIso + ' ' + endDateIso);
+
+    // const example_mono_trans = [
+    //   {
+    //     id: 'aaaa',
+    //     time: 1705091543,
+    //     description: 'test',
+    //     mcc: 4829,
+    //     originalMcc: 4829,
+    //     amount: -100,
+    //     operationAmount: -100,
+    //     currencyCode: 980,
+    //     commissionRate: 0,
+    //     cashbackAmount: 0,
+    //     balance: 536687,
+    //     hold: true,
+    //     receiptId: 'xxxxx'
+    //   }
+    // ];
+
+    let transactions = [];
+
+    const actual_data = await fetchActualData(startDateIso, endDateIso);
+    log("actual data")
+    log(actual_data);
+    log("end actual data")
+
+    const mono_data = await fetchMonoData(startDateTimestamp);
+    log("mono data")
+    log(mono_data);
+    log("end mono data")
+
+    if (mono_data && mono_data.length > 0) {
+      for (const exp of mono_data) {
+        let create_trans = new Object();
+
+        create_trans.account = process.env.ACTUAL_CARD;
+        create_trans.amount = exp.amount;
+        create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
+        create_trans.payee_name = exp.description;
+
+        const found = actual_data.find((actual) => {
+            if (create_trans.amount == actual.amount) {
+              if (create_trans.payee_name == actual.imported_payee) {
+                log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+                return true;
+              }
+              if (create_trans.payee_name == actual.payee) {
+                log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+                return true;
+              }
             }
-            if (create_trans.payee_name == actual.payee) {
-              console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-              return true;
-            }
+            return false;
           }
-          return false;
-        }
-      );
+        );
 
-      if (found) {
-        console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-      } else {
-        console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-        Transaction.push(create_trans);
+        if (found) {
+          log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+        } else {
+          log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+          transactions.push(create_trans);
+        }
       }
     }
-  }
 
-  if (Transaction.length > 0) {
-    console.log("transactions")
-    console.log(Transaction)
-    console.log("end transactions")
-    let result = await actualApi.addTransactions(actual_card, Transaction);
-    console.log(result);
-  } else {
-    console.log('No new data to be added: ' + Transaction.length)
+    if (transactions.length > 0) {
+      console.log("adding " + transactions.length + " transactions");
+      log("transactions")
+      log(transactions)
+      log("end transactions")
+      let result = await actualApi.addTransactions(process.env.ACTUAL_CARD, transactions);
+      log(result);
+    } else {
+      log('No new data to be added: ' + transactions.length)
+    }
+
+    endDate.setDate(startDate.getDate());
+    TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
   }
 
   await actualApi.shutdown();
