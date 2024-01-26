@@ -187,7 +187,7 @@ function sleep(ms) {
       log("transactions")
       log(transactions)
       log("end transactions")
-      let result = await actualApi.importTransactions(process.env.ACTUAL_CARD, transactions);
+      let result = await actualApi.addTransactions(process.env.ACTUAL_CARD, transactions, {learnCategories: true, runTransfers: true});
       log(result);
     } else {
       log('No new data to be added: ' + transactions.length)
