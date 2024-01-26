@@ -1,4 +1,5 @@
 // npm install --save @actual-app/api
+// npm install --save node-cron@3.0.3
 const actualApi = require('@actual-app/api');
 
 const CACHE_DIR_PATH = '.cache/';
@@ -27,7 +28,7 @@ function sleep(ms) {
   });
 }
 
-(async () => {
+async function fetch_data() {
   // MONO
   async function fetchMonoData(startDateTimestamp, endDateTimestamp) {
     try {
@@ -204,4 +205,10 @@ function sleep(ms) {
   }
 
   await actualApi.shutdown();
-})();
+};
+
+var cron = require('node-cron');
+
+cron.schedule('0 * * * *', async () => {
+  await fetch_data();
+});
