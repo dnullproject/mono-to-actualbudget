@@ -196,7 +196,9 @@ function sleep(ms) {
     endDate = startDate;
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
 
-    await sleep(200);
+    if (TOTAL_DAYS_SYNC > 0) {
+      await sleep(60 * 1000); // 60 seconds
+    }
   }
 
   await actualApi.shutdown();
