@@ -57,6 +57,7 @@ function combine_mono_data(mono_income_data, mono_expence_data) {
         }
       return false;
     });
+    // remove found element
     mono_expence_data.splice(mono_expence_data.indexOf(found), 1);
 
     if (found) {
@@ -175,16 +176,19 @@ async function fetch_data() {
     log("end actual data")
 
     const mono_expence_data = await fetchMonoData(MONO_EXPENSE_CARD, startDateTimestamp, endDateTimestamp);
-    log("mono data")
-    log(mono_expence_data);
-    log("end mono data")
+    console.log("mono expence data")
+    console.log(mono_expence_data);
+    console.log("end mono expence data")
 
     const mono_income_data = await fetchMonoData(MONO_INCOME_CARD, startDateTimestamp, endDateTimestamp);
-    log("mono income data")
-    log(mono_income_data);
-    log("end mono income data")
+    console.log("mono income data")
+    console.log(mono_income_data);
+    console.log("end mono income data")
 
     const mono_data = combine_mono_data(mono_income_data, mono_expence_data);
+    console.log("mono combined data")
+    console.log(mono_data);
+    console.log("end mono combined data")
 
     if (mono_data && mono_data.length > 0) {
       for (const exp of mono_data) {
