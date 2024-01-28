@@ -57,7 +57,7 @@ function combine_mono_data(mono_income_data, mono_expence_data) {
         }
       return false;
     });
-    mono_expence_data.remove(found);
+    mono_expence_data.splice(mono_expence_data.indexOf(found), 1);
 
     if (found) {
       inc_data.amount += found.amount;
