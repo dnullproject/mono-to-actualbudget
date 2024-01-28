@@ -51,12 +51,8 @@ function sleep(ms) {
 function combine_mono_data(mono_income_data, mono_expence_data) {
   for (let inc_data of mono_income_data) {
     const found = mono_expence_data.find((exp_data) => {
-        if (inc_data.payee_name.toUpperCase() === exp_data.imported_payee.toUpperCase()) {
-          log('combine_mono_data: duplicate imported_payee amount' + inc_data.amount + ' payee:' + inc_data.payee_name);
-          return true;
-        }
-        if (inc_data.payee_name.toUpperCase() === exp_data.payee.toUpperCase()) {
-          log('combine_mono_data: duplicate payee amount' + inc_data.amount + ' payee:' + inc_data.payee_name);
+        if (inc_data.description.toUpperCase() === exp_data.description.toUpperCase()) {
+          log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
           return true;
         }
       return false;
