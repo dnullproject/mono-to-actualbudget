@@ -6,9 +6,11 @@ const CACHE_DIR_PATH = '.cache/';
 const MONO_URL = 'https://api.monobank.ua/';
 let TOTAL_DAYS_SYNC = parseInt(process.env.DAYS_TO_SYNC);
 const DEFAULT_DAYS_SYNC = TOTAL_DAYS_SYNC < 7 ? TOTAL_DAYS_SYNC : 7;
-
-const MONO_INCOME_CARD = process.env.MONO_INCOME_CARD;
-const MONO_EXPENSE_CARD = process.env.MONO_EXPENCE_CARD;
+const MONO_TOKEN = process.env.MONO_TOKEN;
+const ACTUAL_URL = process.env.ACTUAL_URL;
+const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
+const ACTUAL_SYNC_ID = process.env.ACTUAL_SYNC_ID;
+const ACTUAL_CARD = process.env.ACTUAL_CARD;
 
 function create_cache_dir() {
   const fs = require('fs');
@@ -48,32 +50,50 @@ function sleep(ms) {
     //     receiptId: 'xxxxx'
     //   }
     // ];
-function combine_mono_data(mono_income_data, mono_expence_data) {
-  for (let inc_data of mono_income_data) {
-    const found = mono_expence_data.find((exp_data) => {
-        if (inc_data.time === exp_data.time) {
+function combine_mono_data(mono_data, new_data) {
+  for (let inc_data of mono_data) {
+    const found = new_data.find((exp_data) => {
+        if (inc_data.time === exp_data.time && inc_data.currencyCode === exp_data.currencyCode) {
           log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
           return true;
         }
       return false;
     });
-    // remove found element
-    mono_expence_data.splice(mono_expence_data.indexOf(found), 1);
 
     if (found) {
+      // remove found element
+      new_data.splice(new_data.indexOf(found), 1);
+
       inc_data.amount += found.amount;
     }
   }
 
-  return mono_income_data.concat(mono_expence_data);
+  return new_data.concat(mono_data);
 }
 
 async function fetch_data() {
   // MONO
+  async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
+    let card_index = 0;
+    let mono_data = [];
+    while(true) {
+      const mono_card = process.env["MONO_CARD_"+card_index];
+      if (!mono_card) {
+        break;
+      }
+      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
+      if (mono_data.length == 0) {
+        mono_data = new_data;
+      } else {
+        mono_data = combine_mono_data(mono_data, new_data);
+      }
+    }
+  }
+
   async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
     try {
       const response = await fetch(MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp, {
-        headers: { 'X-Token': process.env.MONO_TOKEN, },
+        headers: { 'X-Token': MONO_TOKEN, },
       });
 
       if (!response.ok) {
@@ -144,11 +164,11 @@ async function fetch_data() {
 
   await actualApi.init({
     dataDir: CACHE_DIR_PATH,
-    serverURL: process.env.ACTUAL_URL,
-    password: process.env.ACTUAL_PASSWORD,
+    serverURL: ACTUAL_URL,
+    password: ACTUAL_PASSWORD,
   });
 
-  await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
+  await actualApi.downloadBudget(ACTUAL_SYNC_ID);
 
   let endDate = new Date();
   endDate.setHours(0, 0, 0, 0);
@@ -171,30 +191,20 @@ async function fetch_data() {
     let transactions = [];
 
     const actual_data = await fetchActualData(startDateIso, endDateIso);
-    log("actual data")
+    log("actual data-----------------------------------------------------------")
     log(actual_data);
-    log("end actual data")
+    log("end actual data-----------------------------------------------------------")
 
-    const mono_expence_data = await fetchMonoData(MONO_EXPENSE_CARD, startDateTimestamp, endDateTimestamp);
-    console.log("mono expence data")
-    console.log(mono_expence_data);
-    console.log("end mono expence data")
-
-    const mono_income_data = await fetchMonoData(MONO_INCOME_CARD, startDateTimestamp, endDateTimestamp);
-    console.log("mono income data")
-    console.log(mono_income_data);
-    console.log("end mono income data")
-
-    const mono_data = combine_mono_data(mono_income_data, mono_expence_data);
-    console.log("mono combined data")
+    const mono_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
+    console.log("mono data-----------------------------------------------------------")
     console.log(mono_data);
-    console.log("end mono combined data")
+    console.log("end mono data-----------------------------------------------------------")
 
     if (mono_data && mono_data.length > 0) {
       for (const exp of mono_data) {
         let create_trans = new Object();
 
-        create_trans.account = process.env.ACTUAL_CARD;
+        create_trans.account = ACTUAL_CARD;
         create_trans.amount = exp.amount;
         create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
         create_trans.payee_name = exp.description;
@@ -228,7 +238,7 @@ async function fetch_data() {
       log("transactions")
       log(transactions)
       log("end transactions")
-      let result = await actualApi.importTransactions(process.env.ACTUAL_CARD, transactions);
+      let result = await actualApi.importTransactions(ACTUAL_CARD, transactions);
       log(result);
     } else {
       log('No new data to be added: ' + transactions.length)
