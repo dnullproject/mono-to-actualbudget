@@ -241,8 +241,15 @@ async function fetch_data() {
   await actualApi.shutdown();
 };
 
+// fetch initial data
+(async () => {
+  await fetch_data();
+})()
+
 var cron = require('node-cron');
 
-cron.schedule('0 * * * *', async () => {
+const CRON_ONCE_PER_HOUR = '0 * * * *';
+// shedule fetch data for later
+cron.schedule(CRON_ONCE_PER_HOUR, async () => {
   await fetch_data();
 });
