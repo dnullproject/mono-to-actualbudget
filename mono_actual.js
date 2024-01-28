@@ -7,6 +7,9 @@ const MONO_URL = 'https://api.monobank.ua/';
 let TOTAL_DAYS_SYNC = parseInt(process.env.DAYS_TO_SYNC);
 const DEFAULT_DAYS_SYNC = TOTAL_DAYS_SYNC < 7 ? TOTAL_DAYS_SYNC : 7;
 
+const MONO_INCOME_CARD = process.env.MONO_INCOME_CARD;
+const MONO_EXPENSE_CARD = process.env.MONO_EXPENCE_CARD;
+
 function create_cache_dir() {
   const fs = require('fs');
   const dir = CACHE_DIR_PATH;
@@ -28,11 +31,51 @@ function sleep(ms) {
   });
 }
 
+// const example_mono_trans = [
+    //   {
+    //     id: 'aaaa',
+    //     time: 1705091543,
+    //     description: 'test',
+    //     mcc: 4829,
+    //     originalMcc: 4829,
+    //     amount: -100,
+    //     operationAmount: -100,
+    //     currencyCode: 980,
+    //     commissionRate: 0,
+    //     cashbackAmount: 0,
+    //     balance: 536687,
+    //     hold: true,
+    //     receiptId: 'xxxxx'
+    //   }
+    // ];
+function combine_mono_data(mono_income_data, mono_expence_data) {
+  for (let inc_data of mono_income_data) {
+    const found = mono_expence_data.find((exp_data) => {
+        if (inc_data.payee_name.toUpperCase() === exp_data.imported_payee.toUpperCase()) {
+          log('combine_mono_data: duplicate imported_payee amount' + inc_data.amount + ' payee:' + inc_data.payee_name);
+          return true;
+        }
+        if (inc_data.payee_name.toUpperCase() === exp_data.payee.toUpperCase()) {
+          log('combine_mono_data: duplicate payee amount' + inc_data.amount + ' payee:' + inc_data.payee_name);
+          return true;
+        }
+      return false;
+    });
+    mono_expence_data.remove(found);
+
+    if (found) {
+      inc_data.amount += found.amount;
+    }
+  }
+
+  return mono_income_data.concat(mono_expence_data);
+}
+
 async function fetch_data() {
   // MONO
-  async function fetchMonoData(startDateTimestamp, endDateTimestamp) {
+  async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
     try {
-      const response = await fetch(MONO_URL + '/personal/statement/' + process.env.MONO_CARD + '/' + startDateTimestamp + '/' + endDateTimestamp, {
+      const response = await fetch(MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp, {
         headers: { 'X-Token': process.env.MONO_TOKEN, },
       });
 
@@ -41,6 +84,12 @@ async function fetch_data() {
       }
 
       const data = await response.json();
+
+      // Mono allows 1 request per 60 seconds
+      if (TOTAL_DAYS_SYNC > 0) {
+        await sleep(60 * 1000); // 60 seconds
+      }
+
       return data;
     } catch (error) {
       console.error(error);
@@ -122,24 +171,6 @@ async function fetch_data() {
 
     console.log('Sync: ' + startDateIso + ' ' + endDateIso);
 
-    // const example_mono_trans = [
-    //   {
-    //     id: 'aaaa',
-    //     time: 1705091543,
-    //     description: 'test',
-    //     mcc: 4829,
-    //     originalMcc: 4829,
-    //     amount: -100,
-    //     operationAmount: -100,
-    //     currencyCode: 980,
-    //     commissionRate: 0,
-    //     cashbackAmount: 0,
-    //     balance: 536687,
-    //     hold: true,
-    //     receiptId: 'xxxxx'
-    //   }
-    // ];
-
     let transactions = [];
 
     const actual_data = await fetchActualData(startDateIso, endDateIso);
@@ -147,10 +178,17 @@ async function fetch_data() {
     log(actual_data);
     log("end actual data")
 
-    const mono_data = await fetchMonoData(startDateTimestamp, endDateTimestamp);
+    const mono_expence_data = await fetchMonoData(MONO_EXPENSE_CARD, startDateTimestamp, endDateTimestamp);
     log("mono data")
     log(mono_data);
     log("end mono data")
+
+    const mono_income_data = await fetchMonoData(MONO_INCOME_CARD, startDateTimestamp, endDateTimestamp);
+    log("mono income data")
+    log(mono_income_data);
+    log("end mono income data")
+
+    const mono_data = combine_mono_data(mono_income_data, mono_expence_data);
 
     if (mono_data && mono_data.length > 0) {
       for (const exp of mono_data) {
@@ -198,10 +236,6 @@ async function fetch_data() {
 
     endDate = startDate;
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
-
-    if (TOTAL_DAYS_SYNC > 0) {
-      await sleep(60 * 1000); // 60 seconds
-    }
   }
 
   await actualApi.shutdown();
