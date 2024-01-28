@@ -180,7 +180,7 @@ async function fetch_data() {
 
     const mono_expence_data = await fetchMonoData(MONO_EXPENSE_CARD, startDateTimestamp, endDateTimestamp);
     log("mono data")
-    log(mono_data);
+    log(mono_expence_data);
     log("end mono data")
 
     const mono_income_data = await fetchMonoData(MONO_INCOME_CARD, startDateTimestamp, endDateTimestamp);
