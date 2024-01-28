@@ -20,6 +20,6 @@ For deduplication to take place you should not Hide decimals (Settings/Formattin
 
 - [ ] better codebase
 - [ ] run non-root
-- [/] more that one card
+- [x] more that one card
 - [ ] docs
 - [ ] helm/k8s
