@@ -77,8 +77,10 @@ async function fetch_data() {
     let card_index = 0;
     let mono_data = [];
     while(true) {
-      const mono_card = process.env["MONO_CARD_"+card_index];
+      console.log("Parsing card number " + card_index);
+      const mono_card = process.env["MONO_CARD_" + card_index];
       if (!mono_card) {
+        console.log("Card number " + card_index + " is absent");
         break;
       }
       const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
@@ -87,7 +89,11 @@ async function fetch_data() {
       } else {
         mono_data = combine_mono_data(mono_data, new_data);
       }
+
+      card_index++;
     }
+
+    return mono_data;
   }
 
   async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
