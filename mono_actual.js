@@ -51,7 +51,7 @@ function sleep(ms) {
 function combine_mono_data(mono_income_data, mono_expence_data) {
   for (let inc_data of mono_income_data) {
     const found = mono_expence_data.find((exp_data) => {
-        if (inc_data.description.toUpperCase() === exp_data.description.toUpperCase()) {
+        if (inc_data.time === exp_data.time) {
           log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
           return true;
         }
