@@ -21,12 +21,6 @@ function create_cache_dir() {
   }
 }
 
-function log(text) {
-  if (process.env.DEBUG) {
-    console.log(text);
-  }
-}
-
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -54,7 +48,7 @@ function combine_mono_data(mono_data, new_data) {
   for (let inc_data of mono_data) {
     const found = new_data.find((exp_data) => {
         if (inc_data.time === exp_data.time && inc_data.currencyCode === exp_data.currencyCode) {
-          log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
+          console.log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
           return true;
         }
       return false;
@@ -197,9 +191,9 @@ async function fetch_data() {
     let transactions = [];
 
     const actual_data = await fetchActualData(startDateIso, endDateIso);
-    log("actual data-----------------------------------------------------------")
-    log(actual_data);
-    log("end actual data-----------------------------------------------------------")
+    console.log("actual data-----------------------------------------------------------")
+    console.log(actual_data);
+    console.log("end actual data-----------------------------------------------------------")
 
     const mono_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
     console.log("mono data-----------------------------------------------------------")
@@ -218,11 +212,11 @@ async function fetch_data() {
         const found = actual_data.find((actual) => {
             if (create_trans.amount == actual.amount) {
               if (create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
-                log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+                console.log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
                 return true;
               }
               if (create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
-                log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+                console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
                 return true;
               }
             }
@@ -231,9 +225,9 @@ async function fetch_data() {
         );
 
         if (found) {
-          log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+          console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
         } else {
-          log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+          console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
           transactions.push(create_trans);
         }
       }
@@ -241,13 +235,13 @@ async function fetch_data() {
 
     if (transactions.length > 0) {
       console.log("adding " + transactions.length + " transactions");
-      log("transactions")
-      log(transactions)
-      log("end transactions")
+      console.log("transactions")
+      console.log(transactions)
+      console.log("end transactions")
       let result = await actualApi.importTransactions(ACTUAL_CARD, transactions);
-      log(result);
+      console.log(result);
     } else {
-      log('No new data to be added: ' + transactions.length)
+      console.log('No new data to be added: ' + transactions.length)
     }
 
     endDate = startDate;
