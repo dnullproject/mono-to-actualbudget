@@ -80,15 +80,20 @@ async function fetch_data() {
       }
       card_index++;
 
+      console.log("splitting " + cards_data);
       const array = cards_data.split(":");
+      console.log("after split " + array);
       const mono_card = array[0];
       const actual_card = array[1];
 
       const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
-      result.push({
-        actual_card: actual_card,
-        mono_data: new_data
-      });
+      
+      if (actual_card && new_data) {
+        result.push({
+          actual_card: actual_card,
+          mono_data: new_data
+        });
+      }
       // if (mono_data.length == 0) {
       //   mono_data = new_data;
       // } else {
@@ -178,6 +183,8 @@ async function fetch_data() {
   });
 
   await actualApi.downloadBudget(ACTUAL_SYNC_ID);
+  const accounts = await actualApi.getAccounts();
+  console.log("accounts " + JSON.stringify(accounts));
 
   let endDate = new Date();
   endDate.setHours(0, 0, 0, 0);
