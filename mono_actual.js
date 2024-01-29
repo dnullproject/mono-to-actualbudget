@@ -45,27 +45,6 @@ function sleep(ms) {
     //     receiptId: 'xxxxx'
     //   }
     // ];
-// function combine_mono_data(mono_data, new_data) {
-//   for (let inc_data of mono_data) {
-//     const found = new_data.find((exp_data) => {
-//         if (inc_data.time === exp_data.time && inc_data.currencyCode === exp_data.currencyCode) {
-//           console.log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
-//           return true;
-//         }
-//       return false;
-//     });
-
-//     if (found) {
-//       // remove found element
-//       new_data.splice(new_data.indexOf(found), 1);
-
-//       inc_data.amount += found.amount;
-//     }
-//   }
-
-//   return new_data.concat(mono_data);
-// }
-
 async function fetch_data() {
   // MONO
   async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
@@ -103,11 +82,6 @@ async function fetch_data() {
           mono_data: new_data
         });
       }
-      // if (mono_data.length == 0) {
-      //   mono_data = new_data;
-      // } else {
-      //   mono_data = combine_mono_data(mono_data, new_data);
-      // }
     }
 
     return result;
