@@ -69,6 +69,17 @@ function sleep(ms) {
 async function fetch_data() {
   // MONO
   async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
+    // accounts = [
+    //     {
+    //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
+    //       "name":"name of the budget",
+    //       "offbudget":true,
+    //       "closed":false
+    //     }
+    //   ]
+    const accounts = await actualApi.getAccounts();
+    console.log("accounts " + JSON.stringify(accounts));
+
     let card_index = 0;
     let result = [];
     while(true) {
@@ -84,13 +95,19 @@ async function fetch_data() {
       const array = cards_data.split(":");
       console.log("after split " + array);
       const mono_card = array[0];
-      const actual_card = array[1];
+      const actual_card = accounts.find((account) => {
+        if (account.name.toUpperCase() === array[1].toUpperCase()) {
+          return true;
+        }
+        return false;
+      });
+      const actual_id = actual_card.id;
 
       const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
       
-      if (actual_card && new_data) {
+      if (actual_id && new_data) {
         result.push({
-          actual_card: actual_card,
+          actual_card: actual_id,
           mono_data: new_data
         });
       }
@@ -183,8 +200,6 @@ async function fetch_data() {
   });
 
   await actualApi.downloadBudget(ACTUAL_SYNC_ID);
-  const accounts = await actualApi.getAccounts();
-  console.log("accounts " + JSON.stringify(accounts));
 
   let endDate = new Date();
   endDate.setHours(0, 0, 0, 0);
@@ -252,19 +267,19 @@ async function fetch_data() {
             transactions.push(create_trans);
           }
         }
-      }
-    }
 
-    if (transactions.length > 0) {
-      console.log("adding " + transactions.length + " transactions");
-      console.log("transactions")
-      console.log(transactions)
-      console.log("end transactions")
-      let result = await actualApi.importTransactions(ACTUAL_CARD, transactions);
-      console.log(result);
-    } else {
-      console.log('No new data to be added: ' + transactions.length)
-    }
+        if (transactions.length > 0) {
+          console.log("adding " + transactions.length + " transactions");
+          console.log("transactions")
+          console.log(transactions)
+          console.log("end transactions")
+          let result = await actualApi.importTransactions(data.actual_card, transactions);
+          console.log(result);
+        } else {
+          console.log('No new data to be added: ' + transactions.length)
+        }
+      }
+      }
 
     endDate = startDate;
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
