@@ -278,6 +278,8 @@ async function fetch_data() {
         } else {
           console.log('No new data to be added: ' + transactions.length)
         }
+        
+        transactions = [];
       }
       }
 
