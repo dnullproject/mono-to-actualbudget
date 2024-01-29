@@ -10,8 +10,8 @@ const MONO_TOKEN = process.env.MONO_TOKEN;
 const ACTUAL_URL = process.env.ACTUAL_URL;
 const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
 const ACTUAL_SYNC_ID = process.env.ACTUAL_SYNC_ID;
-const ACTUAL_CARD = process.env.ACTUAL_CARD;
 const USE_NODE_CRON = process.env.USE_NODE_CRON;
+let ACTUAL_ACCOUNTS = []
 
 function create_cache_dir() {
   const fs = require('fs');
@@ -69,17 +69,6 @@ function sleep(ms) {
 async function fetch_data() {
   // MONO
   async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
-    // accounts = [
-    //     {
-    //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
-    //       "name":"name of the budget",
-    //       "offbudget":true,
-    //       "closed":false
-    //     }
-    //   ]
-    const accounts = await actualApi.getAccounts();
-    console.log("accounts " + JSON.stringify(accounts));
-
     let card_index = 0;
     let result = [];
     while(true) {
@@ -95,8 +84,11 @@ async function fetch_data() {
       const array = cards_data.split(":");
       console.log("after split " + array);
       const mono_card = array[0];
-      const actual_card = accounts.find((account) => {
+      const actual_card = ACTUAL_ACCOUNTS.find((account) => {
         if (account.name.toUpperCase() === array[1].toUpperCase()) {
+          return true;
+        }
+        if (account.id.toUpperCase() === array[1].toUpperCase()) {
           return true;
         }
         return false;
@@ -200,6 +192,16 @@ async function fetch_data() {
   });
 
   await actualApi.downloadBudget(ACTUAL_SYNC_ID);
+  // accounts = [
+  //     {
+  //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
+  //       "name":"name of the budget",
+  //       "offbudget":true,
+  //       "closed":false
+  //     }
+  //   ]
+  ACTUAL_ACCOUNTS = await actualApi.getAccounts();
+  console.log("actual accounts " + JSON.stringify(ACTUAL_ACCOUNTS));
 
   let endDate = new Date();
   endDate.setHours(0, 0, 0, 0);
@@ -278,7 +280,7 @@ async function fetch_data() {
         } else {
           console.log('No new data to be added: ' + transactions.length)
         }
-        
+
         transactions = [];
       }
       }
