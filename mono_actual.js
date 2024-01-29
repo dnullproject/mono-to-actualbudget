@@ -11,6 +11,7 @@ const ACTUAL_URL = process.env.ACTUAL_URL;
 const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
 const ACTUAL_SYNC_ID = process.env.ACTUAL_SYNC_ID;
 const ACTUAL_CARD = process.env.ACTUAL_CARD;
+const USE_NODE_CRON = process.env.USE_NODE_CRON;
 
 function create_cache_dir() {
   const fs = require('fs');
@@ -44,50 +45,58 @@ function sleep(ms) {
     //     receiptId: 'xxxxx'
     //   }
     // ];
-function combine_mono_data(mono_data, new_data) {
-  for (let inc_data of mono_data) {
-    const found = new_data.find((exp_data) => {
-        if (inc_data.time === exp_data.time && inc_data.currencyCode === exp_data.currencyCode) {
-          console.log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
-          return true;
-        }
-      return false;
-    });
+// function combine_mono_data(mono_data, new_data) {
+//   for (let inc_data of mono_data) {
+//     const found = new_data.find((exp_data) => {
+//         if (inc_data.time === exp_data.time && inc_data.currencyCode === exp_data.currencyCode) {
+//           console.log('combine_mono_data: duplicate imported_payee amount ' + inc_data.amount + ' payee: ' + inc_data.description);
+//           return true;
+//         }
+//       return false;
+//     });
 
-    if (found) {
-      // remove found element
-      new_data.splice(new_data.indexOf(found), 1);
+//     if (found) {
+//       // remove found element
+//       new_data.splice(new_data.indexOf(found), 1);
 
-      inc_data.amount += found.amount;
-    }
-  }
+//       inc_data.amount += found.amount;
+//     }
+//   }
 
-  return new_data.concat(mono_data);
-}
+//   return new_data.concat(mono_data);
+// }
 
 async function fetch_data() {
   // MONO
   async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
     let card_index = 0;
-    let mono_data = [];
+    let result = [];
     while(true) {
       console.log("Parsing card number " + card_index);
-      const mono_card = process.env["MONO_CARD_" + card_index];
-      if (!mono_card) {
+      const cards_data = process.env["MONO_CARD_" + card_index];
+      if (!cards_data) {
         console.log("Card number " + card_index + " is absent");
         break;
       }
-      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
-      if (mono_data.length == 0) {
-        mono_data = new_data;
-      } else {
-        mono_data = combine_mono_data(mono_data, new_data);
-      }
-
       card_index++;
+
+      const array = cards_data.split(":");
+      const mono_card = array[0];
+      const actual_card = array[1];
+
+      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
+      result.push({
+        actual_card: actual_card,
+        mono_data: new_data
+      });
+      // if (mono_data.length == 0) {
+      //   mono_data = new_data;
+      // } else {
+      //   mono_data = combine_mono_data(mono_data, new_data);
+      // }
     }
 
-    return mono_data;
+    return result;
   }
 
   async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
@@ -195,40 +204,46 @@ async function fetch_data() {
     console.log(actual_data);
     console.log("end actual data-----------------------------------------------------------")
 
-    const mono_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
+    const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
     console.log("mono data-----------------------------------------------------------")
-    console.log(mono_data);
+    console.log(cards_data);
     console.log("end mono data-----------------------------------------------------------")
 
-    if (mono_data && mono_data.length > 0) {
-      for (const exp of mono_data) {
-        let create_trans = new Object();
+    if (cards_data && cards_data.length > 0) {
+      // cards_data = {
+      //   actual_card: actual_card
+      //   mono_data: mono_data_array
+      // }
+      for (const data of cards_data) {
+        for (const exp of data.mono_data) {
+          let create_trans = {};
 
-        create_trans.account = ACTUAL_CARD;
-        create_trans.amount = exp.amount;
-        create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
-        create_trans.payee_name = exp.description;
+          create_trans.account = data.actual_card;
+          create_trans.amount = exp.amount;
+          create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
+          create_trans.payee_name = exp.description;
 
-        const found = actual_data.find((actual) => {
-            if (create_trans.amount == actual.amount) {
-              if (create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
-                console.log('duplicate: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-                return true;
+          const found = actual_data.find((actual) => {
+              if (create_trans.amount == actual.amount) {
+                if (create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
+                  console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
+                  return true;
+                }
+                if (create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
+                  console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+                  return true;
+                }
               }
-              if (create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
-                console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-                return true;
-              }
+              return false;
             }
-            return false;
-          }
-        );
+          );
 
-        if (found) {
-          console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-        } else {
-          console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-          transactions.push(create_trans);
+          if (found) {
+            console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+          } else {
+            console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+            transactions.push(create_trans);
+          }
         }
       }
     }
@@ -256,10 +271,12 @@ async function fetch_data() {
   await fetch_data();
 })()
 
-var cron = require('node-cron');
+if (USE_NODE_CRON) {
+  var cron = require('node-cron');
 
-const CRON_ONCE_PER_HOUR = '0 * * * *';
-// shedule fetch data for later
-cron.schedule(CRON_ONCE_PER_HOUR, async () => {
-  await fetch_data();
-});
+  const CRON_ONCE_PER_HOUR = '0 * * * *';
+  // shedule fetch data for later
+  cron.schedule(CRON_ONCE_PER_HOUR, async () => {
+    await fetch_data();
+  });
+}
