@@ -1,45 +1,96 @@
 // npm install --save @actual-app/api
-let actualApi = require('@actual-app/api');
+// npm install --save node-cron@3.0.3
+const actualApi = require('@actual-app/api');
 
-(async () => {
-  await actualApi.init({
-    dataDir: '.cache/',
-    serverURL: process.env.ACTUAL_URL,
-    password: process.env.ACTUAL_PASSWORD,
-  });
+const CACHE_DIR_PATH = '.cache/';
+const MONO_URL = 'https://api.monobank.ua/';
+let TOTAL_DAYS_SYNC = parseInt(process.env.DAYS_TO_SYNC);
+const DEFAULT_DAYS_SYNC = TOTAL_DAYS_SYNC < 7 ? TOTAL_DAYS_SYNC : 7;
+const MONO_TOKEN = process.env.MONO_TOKEN;
+const ACTUAL_URL = process.env.ACTUAL_URL;
+const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
+const ACTUAL_SYNC_ID = process.env.ACTUAL_SYNC_ID;
+const USE_NODE_CRON = process.env.USE_NODE_CRON;
+let ACTUAL_ACCOUNTS = []
 
-  var fs = require('fs');
-  var dir = '.cache';
+function create_cache_dir() {
+  const fs = require('fs');
+  const dir = CACHE_DIR_PATH;
 
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir);
   }
+}
 
-  await actualApi.downloadBudget(process.env.ACTUAL_SYNC_ID);
-  const endDate = new Date();
-  const endDateIso = endDate.toISOString().slice(0, 10);
-  const endDateTimestamp = endDate.getTime() / 1000;
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
-  const startDate = new Date(endDate.getTime() - 86400000 * parseInt(process.env.DAYS_TO_SYNC));
-  const startDateIso = startDate.toISOString().slice(0, 10);
-  const startDateTimestamp = new Date(startDateIso).getTime() / 1000;
-
-  console.log('Sync: ' + startDateIso + ' ' + endDateIso);
-
-  const actual_card = process.env.ACTUAL_CARD;
-  const mono_card = process.env.MONO_CARD;
-  const mono_url = 'https://api.monobank.ua/';
-  const mono_api_token = process.env.MONO_TOKEN;
-
-  let mono_data = Array();
-  let Transaction = [];
-
-
+// const example_mono_trans = [
+    //   {
+    //     id: 'aaaa',
+    //     time: 1705091543,
+    //     description: 'test',
+    //     mcc: 4829,
+    //     originalMcc: 4829,
+    //     amount: -100,
+    //     operationAmount: -100,
+    //     currencyCode: 980,
+    //     commissionRate: 0,
+    //     cashbackAmount: 0,
+    //     balance: 536687,
+    //     hold: true,
+    //     receiptId: 'xxxxx'
+    //   }
+    // ];
+async function fetch_data() {
   // MONO
-  async function fetchMonoData() {
+  async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
+    let card_index = 0;
+    let result = [];
+    while(true) {
+      console.log("Parsing card number " + card_index);
+      const cards_data = process.env["MONO_CARD_" + card_index];
+      if (!cards_data) {
+        console.log("Card number " + card_index + " is absent");
+        break;
+      }
+      card_index++;
+
+      console.log("splitting " + cards_data);
+      const array = cards_data.split(":");
+      console.log("after split " + array);
+      const mono_card = array[0];
+      const actual_card = ACTUAL_ACCOUNTS.find((account) => {
+        if (account.name.toUpperCase() === array[1].toUpperCase()) {
+          return true;
+        }
+        if (account.id.toUpperCase() === array[1].toUpperCase()) {
+          return true;
+        }
+        return false;
+      });
+      const actual_id = actual_card.id;
+
+      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
+      
+      if (actual_id && new_data) {
+        result.push({
+          actual_card: actual_id,
+          mono_data: new_data
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
     try {
-      const response = await fetch(mono_url + '/personal/statement/' + mono_card + '/' + startDateTimestamp, {
-        headers: { 'X-Token': mono_api_token, },
+      const response = await fetch(MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp, {
+        headers: { 'X-Token': MONO_TOKEN, },
       });
 
       if (!response.ok) {
@@ -47,125 +98,185 @@ let actualApi = require('@actual-app/api');
       }
 
       const data = await response.json();
-      const extractedData = data;
 
-      return extractedData; // Return the refactored data
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  // Example usage:
-  async function useData() {
-    const extractedData = await fetchMonoData();
-    return extractedData;
-  }
-
-  async function fetchActualData() {
-    try {
-      // let budget = await api.getBudgetMonth('2024-01');
-      // let accounts = await api.getAccounts()
-      // console.log(accounts);
-      // console.log(trans)
-      let actual_data = await actualApi.getTransactions(actual_card, startDateIso, endDateIso);
-      return actual_data
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-
-
-  const example_actual_trans = [{
-    // is_parent: false,
-    // is_child: false,
-    // parent_id: null,
-    account: actual_card,
-    // category: '1111',
-    amount: -77700,
-    payee: '333',
-    // notes: null,
-    date: startDateIso,
-    imported_id: null,
-    // error: null,
-    // imported_payee: null,
-    // starting_balance_flag: false,
-    // transfer_id: null,
-    // sort_order: 1705047040628,
-    // cleared: false,
-    // reconciled: false,
-    // tombstone: false,
-    // schedule: null,
-    // subtransactions: []
-  }];
-  const example_mono_trans = [
-    {
-      id: 'aaaa',
-      time: 1705091543,
-      description: 'test',
-      mcc: 4829,
-      originalMcc: 4829,
-      amount: -100,
-      operationAmount: -100,
-      currencyCode: 980,
-      commissionRate: 0,
-      cashbackAmount: 0,
-      balance: 536687,
-      hold: true,
-      receiptId: 'xxxxx'
-    }
-  ];
-
-  async function deduplicate(transaction, actual_data) {
-    let match = false;
-    for (const actual of actual_data) {
-      // console.log('transaction date ' + transaction.date)
-      if (transaction.amount == actual.amount) {
-        if (transaction.payee_name == actual.imported_payee) {
-          console.log('duplicate: amount' + transaction.amount + ' payee:' + transaction.payee_name);
-          match = true;
-        }
-        if (transaction.payee_name == actual.payee) {
-          console.log('duplicate:: amount' + transaction.amount + ' payee:' + transaction.payee_name);
-          match = true;
-        }
+      // Mono allows 1 request per 60 seconds
+      if (TOTAL_DAYS_SYNC > 0) {
+        await sleep(60 * 1000); // 60 seconds
       }
-    }
-    // console.log('match:' + match);
-    return match;
-  }
 
-  actual_data = await fetchActualData();
-  console.log(actual_data);
-  mono_data = await useData();
-  console.log(mono_data);
-
-  for (const exp of mono_data) {
-    let create_trans = new Object();
-    let duplicate = false;
-
-    create_trans.account = actual_card;
-    create_trans.amount = exp.amount;
-    create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
-    create_trans.payee_name = exp.description;
-    duplicate = await deduplicate(create_trans, actual_data);
-    // console.log('duplicate:' + duplicate);
-
-    if (duplicate == true) {
-      console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-    } else {
-      console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-      Transaction.push(create_trans);
+      return data;
+    } catch (error) {
+      console.error(error);
     }
   }
 
-  if (Transaction.length > 0) {
-    console.log(Transaction)
-    let result = await actualApi.addTransactions(actual_card, Transaction);
-    console.log(result);
-  } else {
-    console.log('No new data to be added: ' + Transaction.length)
+  async function fetchActualData(startDateIso, endDateIso) {
+    try {
+      const actual_data = await actualApi.runQuery(
+          actualApi.q('transactions')
+                  .filter({
+                    date: [
+                      { $gte: startDateIso },
+                      { $lte: endDateIso }
+                    ]
+                  })
+                  .select('*')
+        );
+      // actual_data structure
+      // const actual_data = {
+      //   data: [
+      //     {
+      //       id: '8eb6241f-3d36-48aa-aab6-c2c8e',
+      //       is_parent: false,
+      //       is_child: false,
+      //       parent_id: null,
+      //       account: null,
+      //       category: null,
+      //       amount: -15200,
+      //       payee: '13c21c0a-284a-4689-b4',
+      //       notes: null,
+      //       date: '2024-01-35',
+      //       imported_id: null,
+      //       error: null,
+      //       imported_payee: '...',
+      //       starting_balance_flag: false,
+      //       transfer_id: null,
+      //       sort_order: 1706225650763,
+      //       cleared: true,
+      //       reconciled: false,
+      //       tombstone: false,
+      //       schedule: null
+      //     },
+      //   ],
+      //   dependencies: [ 'transactions', 'accounts', 'categories', 'payees', 'schedules' ]
+      // }
+      return actual_data.data
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  // START
+  create_cache_dir();
+
+  await actualApi.init({
+    dataDir: CACHE_DIR_PATH,
+    serverURL: ACTUAL_URL,
+    password: ACTUAL_PASSWORD,
+  });
+
+  await actualApi.downloadBudget(ACTUAL_SYNC_ID);
+  // accounts = [
+  //     {
+  //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
+  //       "name":"name of the budget",
+  //       "offbudget":true,
+  //       "closed":false
+  //     }
+  //   ]
+  ACTUAL_ACCOUNTS = await actualApi.getAccounts();
+  console.log("actual accounts " + JSON.stringify(ACTUAL_ACCOUNTS));
+
+  let endDate = new Date();
+  endDate.setHours(0, 0, 0, 0);
+
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+
+  while (TOTAL_DAYS_SYNC > 0) {
+    const endDateIso = endDate.toISOString().slice(0, 10);
+    const endDateTimestamp = endDate.getTime();
+
+    // set date as end - DAYS_TO_SYNC
+    startDate.setDate(endDate.getDate() - DEFAULT_DAYS_SYNC);
+
+    const startDateIso = startDate.toISOString().slice(0, 10);
+    const startDateTimestamp = startDate.getTime();
+
+    console.log('Sync: ' + startDateIso + ' ' + endDateIso);
+
+    let transactions = [];
+
+    const actual_data = await fetchActualData(startDateIso, endDateIso);
+    console.log("actual data-----------------------------------------------------------")
+    console.log(actual_data);
+    console.log("end actual data-----------------------------------------------------------")
+
+    const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
+    console.log("mono data-----------------------------------------------------------")
+    console.log(cards_data);
+    console.log("end mono data-----------------------------------------------------------")
+
+    if (cards_data && cards_data.length > 0) {
+      // cards_data = {
+      //   actual_card: actual_card
+      //   mono_data: mono_data_array
+      // }
+      for (const data of cards_data) {
+        for (const exp of data.mono_data) {
+          let create_trans = {};
+
+          create_trans.account = data.actual_card;
+          create_trans.amount = exp.amount;
+          create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
+          create_trans.payee_name = exp.description;
+
+          const found = actual_data.find((actual) => {
+              if (create_trans.amount == actual.amount) {
+                if (create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
+                  console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
+                  return true;
+                }
+                if (create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
+                  console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+                  return true;
+                }
+              }
+              return false;
+            }
+          );
+
+          if (found) {
+            console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+          } else {
+            console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+            transactions.push(create_trans);
+          }
+        }
+
+        if (transactions.length > 0) {
+          console.log("adding " + transactions.length + " transactions");
+          console.log("transactions")
+          console.log(transactions)
+          console.log("end transactions")
+          let result = await actualApi.importTransactions(data.actual_card, transactions);
+          console.log(result);
+        } else {
+          console.log('No new data to be added: ' + transactions.length)
+        }
+
+        transactions = [];
+      }
+      }
+
+    endDate = startDate;
+    TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
   }
 
   await actualApi.shutdown();
-})();
+};
+
+// fetch initial data
+(async () => {
+  await fetch_data();
+})()
+
+if (USE_NODE_CRON) {
+  var cron = require('node-cron');
+
+  const CRON_ONCE_PER_HOUR = '0 * * * *';
+  // shedule fetch data for later
+  cron.schedule(CRON_ONCE_PER_HOUR, async () => {
+    await fetch_data();
+  });
+}
