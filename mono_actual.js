@@ -4,8 +4,8 @@ const actualApi = require('@actual-app/api');
 
 const CACHE_DIR_PATH = '.cache/';
 const MONO_URL = 'https://api.monobank.ua/';
-let TOTAL_DAYS_SYNC = parseInt(process.env.DAYS_TO_SYNC);
-const DEFAULT_DAYS_SYNC = TOTAL_DAYS_SYNC < 7 ? TOTAL_DAYS_SYNC : 7;
+const DAYS_TO_SYNC = parseInt(process.env.DAYS_TO_SYNC);
+const DEFAULT_DAYS_SYNC = DAYS_TO_SYNC < 7 ? DAYS_TO_SYNC : 7;
 const MONO_TOKEN = process.env.MONO_TOKEN;
 const ACTUAL_URL = process.env.ACTUAL_URL;
 const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
@@ -183,6 +183,7 @@ async function fetch_data() {
   const startDate = new Date();
   startDate.setHours(0, 0, 0, 0);
 
+  let TOTAL_DAYS_SYNC = DAYS_TO_SYNC;
   while (TOTAL_DAYS_SYNC > 0) {
     const endDateIso = endDate.toISOString().slice(0, 10);
     const endDateTimestamp = endDate.getTime();
