@@ -250,7 +250,9 @@ async function fetch_data() {
           console.log("transactions")
           console.log(transactions)
           console.log("end transactions")
-          let result = await actualApi.importTransactions(data.actual_card, transactions);
+          let result = await actualApi.importTransactions(data.actual_card, transactions).catch((error) => {
+            console.error(error);
+          });
           console.log(result);
         } else {
           console.log('No new data to be added: ' + transactions.length)
@@ -258,7 +260,7 @@ async function fetch_data() {
 
         transactions = [];
       }
-      }
+    }
 
     endDate = startDate;
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
