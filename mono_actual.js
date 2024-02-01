@@ -75,7 +75,7 @@ async function fetch_data() {
       const actual_id = actual_card.id;
 
       const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
-      
+
       if (actual_id && new_data) {
         result.push({
           actual_card: actual_id,
@@ -105,6 +105,24 @@ async function fetch_data() {
       }
 
       return data;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function fetchMonoCardList() {
+    try {
+      const response = await fetch(MONO_URL + '/personal/client-info', {
+        headers: { 'X-Token': MONO_TOKEN, },
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
+
+      console.log(data);
     } catch (error) {
       console.error(error);
     }
@@ -158,6 +176,7 @@ async function fetch_data() {
 
   // START
   create_cache_dir();
+  // fetchMonoCardList();
 
   await actualApi.init({
     dataDir: CACHE_DIR_PATH,
