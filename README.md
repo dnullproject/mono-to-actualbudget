@@ -36,3 +36,5 @@ For deduplication to take place you should not Hide decimals (Settings/Formattin
 - [x] more that one card
 - [ ] docs
 - [ ] helm/k8s
+- [ ] publish on npm
+- [ ] use github docker registry
