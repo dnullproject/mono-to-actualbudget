@@ -101,7 +101,7 @@ async function fetch_data() {
 
       // Mono allows 1 request per 60 seconds
       if (TOTAL_DAYS_SYNC > 0) {
-		// console.log('sleeping for 60 seconds');
+        // console.log('sleeping for 60 seconds');
         await sleep(60 * 1000); // 60 seconds
       }
 
