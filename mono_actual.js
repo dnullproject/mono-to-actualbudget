@@ -4,8 +4,8 @@ const actualApi = require('@actual-app/api');
 
 const CACHE_DIR_PATH = '.cache/';
 const MONO_URL = 'https://api.monobank.ua/';
-let TOTAL_DAYS_SYNC = parseInt(process.env.DAYS_TO_SYNC);
-const DEFAULT_DAYS_SYNC = TOTAL_DAYS_SYNC < 7 ? TOTAL_DAYS_SYNC : 7;
+const DAYS_TO_SYNC = parseInt(process.env.DAYS_TO_SYNC);
+const DEFAULT_DAYS_SYNC = DAYS_TO_SYNC < 7 ? DAYS_TO_SYNC : 7;
 const MONO_TOKEN = process.env.MONO_TOKEN;
 const ACTUAL_URL = process.env.ACTUAL_URL;
 const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
@@ -75,7 +75,7 @@ async function fetch_data() {
       const actual_id = actual_card.id;
 
       const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
-
+      
       if (actual_id && new_data) {
         result.push({
           actual_card: actual_id,
@@ -106,24 +106,6 @@ async function fetch_data() {
       }
 
       return data;
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  async function fetchMonoCardList() {
-    try {
-      const response = await fetch(MONO_URL + '/personal/client-info', {
-        headers: { 'X-Token': MONO_TOKEN, },
-      });
-
-      if (!response.ok) {
-        throw new Error('API request failed');
-      }
-
-      const data = await response.json();
-
-      console.log(data);
     } catch (error) {
       console.error(error);
     }
@@ -177,7 +159,6 @@ async function fetch_data() {
 
   // START
   create_cache_dir();
-  // fetchMonoCardList();
 
   await actualApi.init({
     dataDir: CACHE_DIR_PATH,
@@ -203,6 +184,7 @@ async function fetch_data() {
   const startDate = new Date();
   startDate.setHours(0, 0, 0, 0);
 
+  let TOTAL_DAYS_SYNC = DAYS_TO_SYNC;
   while (TOTAL_DAYS_SYNC > 0) {
     const endDateIso = endDate.toISOString().slice(0, 10);
     const endDateTimestamp = endDate.getTime();
@@ -269,7 +251,9 @@ async function fetch_data() {
           console.log("transactions")
           console.log(transactions)
           console.log("end transactions")
-          let result = await actualApi.importTransactions(data.actual_card, transactions);
+          let result = await actualApi.importTransactions(data.actual_card, transactions).catch((error) => {
+            console.error(error);
+          });
           console.log(result);
         } else {
           console.log('No new data to be added: ' + transactions.length)
@@ -277,7 +261,7 @@ async function fetch_data() {
 
         transactions = [];
       }
-      }
+    }
 
     endDate = startDate;
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
