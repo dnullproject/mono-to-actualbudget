@@ -101,6 +101,7 @@ async function fetch_data() {
 
       // Mono allows 1 request per 60 seconds
       if (TOTAL_DAYS_SYNC > 0) {
+		// console.log('sleeping for 60 seconds');
         await sleep(60 * 1000); // 60 seconds
       }
 
@@ -224,11 +225,11 @@ async function fetch_data() {
 
           const found = actual_data.find((actual) => {
               if (create_trans.amount == actual.amount) {
-                if (create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
+                if (actual.imported_payee && create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
                   console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
                   return true;
                 }
-                if (create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
+                if (actual.payee && create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
                   console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
                   return true;
                 }
