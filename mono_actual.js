@@ -75,7 +75,7 @@ async function fetch_data() {
       const actual_id = actual_card.id;
 
       const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
-      
+
       if (actual_id && new_data) {
         result.push({
           actual_card: actual_id,
