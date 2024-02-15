@@ -3,7 +3,7 @@
 const actualApi = require('@actual-app/api');
 
 const CACHE_DIR_PATH = '.cache/';
-const MONO_URL = 'https://api.monobank.ua/';
+const MONO_URL = 'https://api.monobank.ua';
 const DAYS_TO_SYNC = parseInt(process.env.DAYS_TO_SYNC);
 const DEFAULT_DAYS_SYNC = DAYS_TO_SYNC < 7 ? DAYS_TO_SYNC : 7;
 const MONO_TOKEN = process.env.MONO_TOKEN;
@@ -89,12 +89,13 @@ async function fetch_data() {
 
   async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
     try {
-      const response = await fetch(MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp, {
+      const mono_url = MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp;
+      const response = await fetch(mono_url, {
         headers: { 'X-Token': MONO_TOKEN, },
       });
 
       if (!response.ok) {
-        throw new Error('API request failed');
+        throw new Error(mono_url + ' failed: ' + ' ' + response.status + ' ' + response.statusText);
       }
 
       const data = await response.json();
