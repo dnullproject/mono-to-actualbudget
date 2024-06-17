@@ -223,28 +223,29 @@ async function fetch_data() {
           create_trans.amount = exp.amount;
           create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
           create_trans.payee_name = exp.description;
+          create_trans.imported_id = exp.id
 
-          const found = actual_data.find((actual) => {
-              if (create_trans.amount == actual.amount) {
-                if (actual.imported_payee && create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
-                  console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
-                  return true;
-                }
-                if (actual.payee && create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
-                  console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-                  return true;
-                }
-              }
-              return false;
-            }
-          );
+          // const found = actual_data.find((actual) => {
+          //     if (create_trans.amount == actual.amount) {
+          //       if (actual.imported_payee && create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
+          //         console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
+          //         return true;
+          //       }
+          //       if (actual.payee && create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
+          //         console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+          //         return true;
+          //       }
+          //     }
+          //     return false;
+          //   }
+          // );
 
-          if (found) {
-            console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-          } else {
-            console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+          // if (found) {
+          //   console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+          // } else {
+          //   console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
             transactions.push(create_trans);
-          }
+          // }
         }
 
         if (transactions.length > 0) {
