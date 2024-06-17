@@ -205,68 +205,65 @@ async function fetch_data() {
     console.log(actual_data);
     console.log("end actual data-----------------------------------------------------------")
 
-    if (!actual_data)
-    {
-      continue;
-    }
+    if (actual_data) {
+      const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
+      console.log("mono data-----------------------------------------------------------")
+      console.log(cards_data);
+      console.log("end mono data-----------------------------------------------------------")
 
-    const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
-    console.log("mono data-----------------------------------------------------------")
-    console.log(cards_data);
-    console.log("end mono data-----------------------------------------------------------")
+      if (cards_data && cards_data.length > 0) {
+        // cards_data = {
+        //   actual_card: actual_card
+        //   mono_data: mono_data_array
+        // }
+        for (const data of cards_data) {
+          for (const exp of data.mono_data) {
+            let create_trans = {};
 
-    if (cards_data && cards_data.length > 0) {
-      // cards_data = {
-      //   actual_card: actual_card
-      //   mono_data: mono_data_array
-      // }
-      for (const data of cards_data) {
-        for (const exp of data.mono_data) {
-          let create_trans = {};
+            create_trans.account = data.actual_card;
+            create_trans.amount = exp.amount;
+            create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
+            create_trans.payee_name = exp.description;
+            create_trans.imported_id = exp.id
 
-          create_trans.account = data.actual_card;
-          create_trans.amount = exp.amount;
-          create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
-          create_trans.payee_name = exp.description;
-          create_trans.imported_id = exp.id
+            // const found = actual_data.find((actual) => {
+            //     if (create_trans.amount == actual.amount) {
+            //       if (actual.imported_payee && create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
+            //         console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
+            //         return true;
+            //       }
+            //       if (actual.payee && create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
+            //         console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
+            //         return true;
+            //       }
+            //     }
+            //     return false;
+            //   }
+            // );
 
-          // const found = actual_data.find((actual) => {
-          //     if (create_trans.amount == actual.amount) {
-          //       if (actual.imported_payee && create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
-          //         console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
-          //         return true;
-          //       }
-          //       if (actual.payee && create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
-          //         console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-          //         return true;
-          //       }
-          //     }
-          //     return false;
-          //   }
-          // );
-
-          // if (found) {
-          //   console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-          // } else {
-          //   console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+            // if (found) {
+            //   console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
+            // } else {
+            //   console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
             transactions.push(create_trans);
-          // }
-        }
+            // }
+          }
 
-        if (transactions.length > 0) {
-          console.log("adding " + transactions.length + " transactions");
-          console.log("transactions")
-          console.log(transactions)
-          console.log("end transactions")
-          let result = await actualApi.importTransactions(data.actual_card, transactions).catch((error) => {
-            console.error(error);
-          });
-          console.log(result);
-        } else {
-          console.log('No new data to be added: ' + transactions.length)
-        }
+          if (transactions.length > 0) {
+            console.log("adding " + transactions.length + " transactions");
+            console.log("transactions")
+            console.log(transactions)
+            console.log("end transactions")
+            let result = await actualApi.importTransactions(data.actual_card, transactions).catch((error) => {
+              console.error(error);
+            });
+            console.log(result);
+          } else {
+            console.log('No new data to be added: ' + transactions.length)
+          }
 
-        transactions = [];
+          transactions = [];
+        }
       }
     }
 
