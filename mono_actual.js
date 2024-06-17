@@ -205,6 +205,11 @@ async function fetch_data() {
     console.log(actual_data);
     console.log("end actual data-----------------------------------------------------------")
 
+    if (!actual_data)
+    {
+      continue;
+    }
+
     const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
     console.log("mono data-----------------------------------------------------------")
     console.log(cards_data);
