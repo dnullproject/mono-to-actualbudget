@@ -299,6 +299,7 @@ async function fetch_data() {
 })()
 
 if (USE_NODE_CRON) {
+  console.log("Starting cron");
   var cron = require('node-cron');
 
   const CRON_ONCE_PER_HOUR = '0 * * * *';
