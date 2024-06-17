@@ -28,117 +28,6 @@ function sleep(ms) {
   });
 }
 
-async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
-  try {
-    const mono_url = MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp;
-    const response = await fetch(mono_url, {
-      headers: { 'X-Token': MONO_TOKEN, },
-    });
-
-    if (!response.ok) {
-      throw new Error(mono_url + ' failed: ' + ' ' + response.status + ' ' + response.statusText);
-    }
-
-    const data = await response.json();
-
-    // Mono allows 1 request per 60 seconds
-    if (TOTAL_DAYS_SYNC > 0) {
-      // console.log('sleeping for 60 seconds');
-      await sleep(60 * 1000); // 60 seconds
-    }
-
-    return data;
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
-  let card_index = 0;
-  let result = [];
-  while(true) {
-    console.log("Parsing card number " + card_index);
-    const cards_data = process.env["MONO_CARD_" + card_index];
-    if (!cards_data) {
-      console.log("Card number " + card_index + " is absent");
-      break;
-    }
-    card_index++;
-
-    console.log("splitting " + cards_data);
-    const array = cards_data.split(":");
-    console.log("after split " + array);
-    const mono_card = array[0];
-    const actual_card = ACTUAL_ACCOUNTS.find((account) => {
-      if (account.name.toUpperCase() === array[1].toUpperCase()) {
-        return true;
-      }
-      if (account.id.toUpperCase() === array[1].toUpperCase()) {
-        return true;
-      }
-      return false;
-    });
-    const actual_id = actual_card.id;
-
-    const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
-
-    if (actual_id && new_data) {
-      result.push({
-        actual_card: actual_id,
-        mono_data: new_data
-      });
-    }
-  }
-
-  return result;
-}
-
-async function fetchActualData(startDateIso, endDateIso) {
-  try {
-    const actual_data = await actualApi.runQuery(
-        actualApi.q('transactions')
-            .filter({
-              date: [
-                { $gte: startDateIso },
-                { $lte: endDateIso }
-              ]
-            })
-            .select('*')
-    );
-    // actual_data structure
-    // const actual_data = {
-    //   data: [
-    //     {
-    //       id: '8eb6241f-3d36-48aa-aab6-c2c8e',
-    //       is_parent: false,
-    //       is_child: false,
-    //       parent_id: null,
-    //       account: null,
-    //       category: null,
-    //       amount: -15200,
-    //       payee: '13c21c0a-284a-4689-b4',
-    //       notes: null,
-    //       date: '2024-01-35',
-    //       imported_id: null,
-    //       error: null,
-    //       imported_payee: '...',
-    //       starting_balance_flag: false,
-    //       transfer_id: null,
-    //       sort_order: 1706225650763,
-    //       cleared: true,
-    //       reconciled: false,
-    //       tombstone: false,
-    //       schedule: null
-    //     },
-    //   ],
-    //   dependencies: [ 'transactions', 'accounts', 'categories', 'payees', 'schedules' ]
-    // }
-    return actual_data.data
-  } catch (error) {
-    console.error(error);
-  }
-}
-
 // const example_mono_trans = [
     //   {
     //     id: 'aaaa',
@@ -158,6 +47,117 @@ async function fetchActualData(startDateIso, endDateIso) {
     // ];
 async function fetch_data() {
   // MONO
+  async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
+    let card_index = 0;
+    let result = [];
+    while(true) {
+      console.log("Parsing card number " + card_index);
+      const cards_data = process.env["MONO_CARD_" + card_index];
+      if (!cards_data) {
+        console.log("Card number " + card_index + " is absent");
+        break;
+      }
+      card_index++;
+
+      console.log("splitting " + cards_data);
+      const array = cards_data.split(":");
+      console.log("after split " + array);
+      const mono_card = array[0];
+      const actual_card = ACTUAL_ACCOUNTS.find((account) => {
+        if (account.name.toUpperCase() === array[1].toUpperCase()) {
+          return true;
+        }
+        if (account.id.toUpperCase() === array[1].toUpperCase()) {
+          return true;
+        }
+        return false;
+      });
+      const actual_id = actual_card.id;
+
+      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
+
+      if (actual_id && new_data) {
+        result.push({
+          actual_card: actual_id,
+          mono_data: new_data
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
+    try {
+      const mono_url = MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp;
+      const response = await fetch(mono_url, {
+        headers: { 'X-Token': MONO_TOKEN, },
+      });
+
+      if (!response.ok) {
+        throw new Error(mono_url + ' failed: ' + ' ' + response.status + ' ' + response.statusText);
+      }
+
+      const data = await response.json();
+
+      // Mono allows 1 request per 60 seconds
+      if (TOTAL_DAYS_SYNC > 0) {
+        // console.log('sleeping for 60 seconds');
+        await sleep(60 * 1000); // 60 seconds
+      }
+
+      return data;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function fetchActualData(startDateIso, endDateIso) {
+    try {
+      const actual_data = await actualApi.runQuery(
+          actualApi.q('transactions')
+                  .filter({
+                    date: [
+                      { $gte: startDateIso },
+                      { $lte: endDateIso }
+                    ]
+                  })
+                  .select('*')
+        );
+      // actual_data structure
+      // const actual_data = {
+      //   data: [
+      //     {
+      //       id: '8eb6241f-3d36-48aa-aab6-c2c8e',
+      //       is_parent: false,
+      //       is_child: false,
+      //       parent_id: null,
+      //       account: null,
+      //       category: null,
+      //       amount: -15200,
+      //       payee: '13c21c0a-284a-4689-b4',
+      //       notes: null,
+      //       date: '2024-01-35',
+      //       imported_id: null,
+      //       error: null,
+      //       imported_payee: '...',
+      //       starting_balance_flag: false,
+      //       transfer_id: null,
+      //       sort_order: 1706225650763,
+      //       cleared: true,
+      //       reconciled: false,
+      //       tombstone: false,
+      //       schedule: null
+      //     },
+      //   ],
+      //   dependencies: [ 'transactions', 'accounts', 'categories', 'payees', 'schedules' ]
+      // }
+      return actual_data.data
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   // START
   create_cache_dir();
 
