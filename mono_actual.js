@@ -50,14 +50,14 @@ async function fetch_data() {
 
   // MONO
   async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
-    try {
       let card_index = 0;
       let result = [];
       while (true) {
         console.log("Parsing card number " + card_index);
         const cards_data = process.env["MONO_CARD_" + card_index];
         if (!cards_data) {
-          throw new Error("Card number " + card_index + " is absent");
+          console.log("Card number " + card_index + " is absent");
+          break;
         }
         card_index++;
 
@@ -76,7 +76,9 @@ async function fetch_data() {
         });
         const actual_id = actual_card.id;
 
-        const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp, TOTAL_DAYS_SYNC > 0);
+        const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp, TOTAL_DAYS_SYNC > 0).catch((error) => {
+          console.error(error);
+        });
 
         if (actual_id && new_data) {
           result.push({
@@ -87,9 +89,6 @@ async function fetch_data() {
       }
 
       return result;
-    } catch(error) {
-      console.error(error);
-    }
   }
 
   async function fetchMonoData(card, startDateTimestamp, endDateTimestamp, sleepToAllowNextRequest) {
@@ -97,13 +96,17 @@ async function fetch_data() {
       const mono_url = MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp;
       const response = await fetch(mono_url, {
         headers: { 'X-Token': MONO_TOKEN, },
+      }).catch((error) => {
+        console.error(error);
       });
 
       if (!response.ok) {
         throw new Error(mono_url + ' failed: ' + ' ' + response.status + ' ' + response.statusText);
       }
 
-      const data = await response.json();
+      const data = await response.json().catch((error) => {
+        console.error(error);
+      });
 
       // Mono allows 1 request per 60 seconds
       if (sleepToAllowNextRequest) {
@@ -128,7 +131,9 @@ async function fetch_data() {
                     ]
                   })
                   .select('*')
-        );
+        ).catch((error) => {
+        console.error(error);
+      });
       // actual_data structure
       // const actual_data = {
       //   data: [
@@ -170,9 +175,13 @@ async function fetch_data() {
     dataDir: CACHE_DIR_PATH,
     serverURL: ACTUAL_URL,
     password: ACTUAL_PASSWORD,
+  }).catch((error) => {
+    console.error(error);
   });
 
-  await actualApi.downloadBudget(ACTUAL_SYNC_ID);
+  await actualApi.downloadBudget(ACTUAL_SYNC_ID).catch((error) => {
+    console.error(error);
+  });
   // accounts = [
   //     {
   //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
@@ -181,7 +190,9 @@ async function fetch_data() {
   //       "closed":false
   //     }
   //   ]
-  ACTUAL_ACCOUNTS = await actualApi.getAccounts();
+  ACTUAL_ACCOUNTS = await actualApi.getAccounts().catch((error) => {
+    console.error(error);
+  });
   console.log("actual accounts " + JSON.stringify(ACTUAL_ACCOUNTS));
 
   let endDate = new Date();
@@ -204,13 +215,17 @@ async function fetch_data() {
 
     let transactions = [];
 
-    const actual_data = await fetchActualData(startDateIso, endDateIso);
+    const actual_data = await fetchActualData(startDateIso, endDateIso).catch((error) => {
+      console.error(error);
+    });
     console.log("actual data-----------------------------------------------------------")
     console.log(actual_data);
     console.log("end actual data-----------------------------------------------------------")
 
     if (actual_data) {
-      const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
+      const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp).catch((error) => {
+        console.error(error);
+      });
       console.log("mono data-----------------------------------------------------------")
       console.log(cards_data);
       console.log("end mono data-----------------------------------------------------------")
