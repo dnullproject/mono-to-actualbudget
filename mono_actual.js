@@ -46,11 +46,13 @@ function sleep(ms) {
     //   }
     // ];
 async function fetch_data() {
+  let TOTAL_DAYS_SYNC = DAYS_TO_SYNC;
+
   // MONO
   async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
     let card_index = 0;
     let result = [];
-    while(true) {
+    while (true) {
       console.log("Parsing card number " + card_index);
       const cards_data = process.env["MONO_CARD_" + card_index];
       if (!cards_data) {
@@ -74,7 +76,9 @@ async function fetch_data() {
       });
       const actual_id = actual_card.id;
 
-      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp);
+      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp, TOTAL_DAYS_SYNC > 0).catch((error) => {
+        console.error(error);
+      });
 
       if (actual_id && new_data) {
         result.push({
@@ -87,21 +91,25 @@ async function fetch_data() {
     return result;
   }
 
-  async function fetchMonoData(card, startDateTimestamp, endDateTimestamp) {
+  async function fetchMonoData(card, startDateTimestamp, endDateTimestamp, sleepToAllowNextRequest) {
     try {
       const mono_url = MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp;
       const response = await fetch(mono_url, {
         headers: { 'X-Token': MONO_TOKEN, },
+      }).catch((error) => {
+        console.error(error);
       });
 
       if (!response.ok) {
         throw new Error(mono_url + ' failed: ' + ' ' + response.status + ' ' + response.statusText);
       }
 
-      const data = await response.json();
+      const data = await response.json().catch((error) => {
+        console.error(error);
+      });
 
       // Mono allows 1 request per 60 seconds
-      if (TOTAL_DAYS_SYNC > 0) {
+      if (sleepToAllowNextRequest) {
         // console.log('sleeping for 60 seconds');
         await sleep(60 * 1000); // 60 seconds
       }
@@ -123,7 +131,9 @@ async function fetch_data() {
                     ]
                   })
                   .select('*')
-        );
+        ).catch((error) => {
+        console.error(error);
+      });
       // actual_data structure
       // const actual_data = {
       //   data: [
@@ -165,9 +175,13 @@ async function fetch_data() {
     dataDir: CACHE_DIR_PATH,
     serverURL: ACTUAL_URL,
     password: ACTUAL_PASSWORD,
+  }).catch((error) => {
+    console.error(error);
   });
 
-  await actualApi.downloadBudget(ACTUAL_SYNC_ID);
+  await actualApi.downloadBudget(ACTUAL_SYNC_ID).catch((error) => {
+    console.error(error);
+  });
   // accounts = [
   //     {
   //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
@@ -176,7 +190,9 @@ async function fetch_data() {
   //       "closed":false
   //     }
   //   ]
-  ACTUAL_ACCOUNTS = await actualApi.getAccounts();
+  ACTUAL_ACCOUNTS = await actualApi.getAccounts().catch((error) => {
+    console.error(error);
+  });
   console.log("actual accounts " + JSON.stringify(ACTUAL_ACCOUNTS));
 
   let endDate = new Date();
@@ -185,7 +201,6 @@ async function fetch_data() {
   const startDate = new Date();
   startDate.setHours(0, 0, 0, 0);
 
-  let TOTAL_DAYS_SYNC = DAYS_TO_SYNC;
   while (TOTAL_DAYS_SYNC > 0) {
     const endDateIso = endDate.toISOString().slice(0, 10);
     const endDateTimestamp = endDate.getTime();
@@ -200,67 +215,54 @@ async function fetch_data() {
 
     let transactions = [];
 
-    const actual_data = await fetchActualData(startDateIso, endDateIso);
+    const actual_data = await fetchActualData(startDateIso, endDateIso).catch((error) => {
+      console.error(error);
+    });
     console.log("actual data-----------------------------------------------------------")
     console.log(actual_data);
     console.log("end actual data-----------------------------------------------------------")
 
-    const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp);
-    console.log("mono data-----------------------------------------------------------")
-    console.log(cards_data);
-    console.log("end mono data-----------------------------------------------------------")
+    if (actual_data) {
+      const cards_data = await getMonoDataFromCards(startDateTimestamp, endDateTimestamp).catch((error) => {
+        console.error(error);
+      });
+      console.log("mono data-----------------------------------------------------------")
+      console.log(cards_data);
+      console.log("end mono data-----------------------------------------------------------")
 
-    if (cards_data && cards_data.length > 0) {
-      // cards_data = {
-      //   actual_card: actual_card
-      //   mono_data: mono_data_array
-      // }
-      for (const data of cards_data) {
-        for (const exp of data.mono_data) {
-          let create_trans = {};
+      if (cards_data && cards_data.length > 0) {
+        // cards_data = {
+        //   actual_card: actual_card
+        //   mono_data: mono_data_array
+        // }
+        for (const data of cards_data) {
+          for (const exp of data.mono_data) {
+            let create_trans = {};
 
-          create_trans.account = data.actual_card;
-          create_trans.amount = exp.amount;
-          create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
-          create_trans.payee_name = exp.description;
+            create_trans.account = data.actual_card;
+            create_trans.amount = exp.amount;
+            create_trans.date = new Date(exp.time * 1000).toISOString().slice(0, 10);
+            create_trans.payee_name = exp.description;
+            create_trans.imported_id = exp.id
 
-          const found = actual_data.find((actual) => {
-              if (create_trans.amount == actual.amount) {
-                if (actual.imported_payee && create_trans.payee_name.toUpperCase() === actual.imported_payee.toUpperCase()) {
-                  console.log('duplicate: amount' + create_trans.amount + ' imported payee:' + create_trans.payee_name);
-                  return true;
-                }
-                if (actual.payee && create_trans.payee_name.toUpperCase() === actual.payee.toUpperCase()) {
-                  console.log('duplicate:: amount' + create_trans.amount + ' payee:' + create_trans.payee_name);
-                  return true;
-                }
-              }
-              return false;
-            }
-          );
-
-          if (found) {
-            console.log('skipping date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
-          } else {
-            console.log('create date: ' + create_trans.date + 'amount: ' + create_trans.amount + ' payee: ' + create_trans.payee_name);
             transactions.push(create_trans);
           }
-        }
 
-        if (transactions.length > 0) {
-          console.log("adding " + transactions.length + " transactions");
-          console.log("transactions")
-          console.log(transactions)
-          console.log("end transactions")
-          let result = await actualApi.importTransactions(data.actual_card, transactions).catch((error) => {
-            console.error(error);
-          });
-          console.log(result);
-        } else {
-          console.log('No new data to be added: ' + transactions.length)
-        }
+          if (transactions.length > 0) {
+            console.log("adding " + transactions.length + " transactions");
+            console.log("transactions")
+            console.log(transactions)
+            console.log("end transactions")
+            let result = await actualApi.importTransactions(data.actual_card, transactions).catch((error) => {
+              console.error(error);
+            });
+            console.log(result);
+          } else {
+            console.log('No new data to be added: ' + transactions.length)
+          }
 
-        transactions = [];
+          transactions = [];
+        }
       }
     }
 
@@ -277,6 +279,7 @@ async function fetch_data() {
 })()
 
 if (USE_NODE_CRON) {
+  console.log("Starting cron");
   var cron = require('node-cron');
 
   const CRON_ONCE_PER_HOUR = '0 * * * *';
