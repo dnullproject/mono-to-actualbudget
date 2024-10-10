@@ -280,4 +280,3 @@ async function fetch_data() {
 (async () => {
   await fetch_data();
 })()
-
