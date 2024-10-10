@@ -89,7 +89,7 @@ async function fetch_data() {
       }
     } catch(error) {
       console.error(error);
-    } 
+    }
     return result;
   }
 
