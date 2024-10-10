@@ -10,7 +10,6 @@ const MONO_TOKEN = process.env.MONO_TOKEN;
 const ACTUAL_URL = process.env.ACTUAL_URL;
 const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
 const ACTUAL_SYNC_ID = process.env.ACTUAL_SYNC_ID;
-const USE_NODE_CRON = process.env.USE_NODE_CRON;
 let ACTUAL_ACCOUNTS = []
 
 function create_cache_dir() {
@@ -52,48 +51,50 @@ async function fetch_data() {
   async function getMonoDataFromCards(startDateTimestamp, endDateTimestamp) {
     let card_index = 0;
     let result = [];
-    while (true) {
-      console.log("Parsing card number " + card_index);
-      const cards_data = process.env["MONO_CARD_" + card_index];
-      if (!cards_data) {
-        console.log("Card number " + card_index + " is absent");
-        break;
-      }
-      card_index++;
-
-      console.log("splitting " + cards_data);
-      const array = cards_data.split(":");
-      console.log("after split " + array);
-      const mono_card = array[0];
-      const actual_card = ACTUAL_ACCOUNTS.find((account) => {
-        if (account.name.toUpperCase() === array[1].toUpperCase()) {
-          return true;
+    try {
+      while (true) {
+        console.log("Parsing card number " + card_index);
+        const cards_data = process.env["MONO_CARD_" + card_index];
+        if (!cards_data) {
+          console.log("Card number " + card_index + " is absent");
+          break;
         }
-        if (account.id.toUpperCase() === array[1].toUpperCase()) {
-          return true;
-        }
-        return false;
-      });
-      const actual_id = actual_card.id;
+        card_index++;
 
-      const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp, TOTAL_DAYS_SYNC > 0).catch((error) => {
-        console.error(error);
-      });
-
-      if (actual_id && new_data) {
-        result.push({
-          actual_card: actual_id,
-          mono_data: new_data
+        const array = cards_data.split(":");
+        console.log("splited card data " + array);
+        const mono_card = array[0];
+        const actual_card = ACTUAL_ACCOUNTS.find((account) => {
+          return account.name.toUpperCase() === array[1].toUpperCase()
+                || account.id.toUpperCase() === array[1].toUpperCase();
         });
-      }
-    }
+        if (!actual_card) {
+          console.log("No actual card for " + array[1]);
+          continue;
+        }
 
+        const actual_id = actual_card.id;
+
+        const new_data = await fetchMonoData(mono_card, startDateTimestamp, endDateTimestamp, TOTAL_DAYS_SYNC > 0).catch((error) => {
+          console.error(error);
+        });
+
+        if (actual_id && new_data) {
+          result.push({
+            actual_card: actual_id,
+            mono_data: new_data
+          });
+        }
+      }
+    } catch(error) {
+      console.error(error);
+    }
     return result;
   }
 
   async function fetchMonoData(card, startDateTimestamp, endDateTimestamp, sleepToAllowNextRequest) {
     try {
-      const mono_url = MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp;
+      const mono_url = new URL(MONO_URL + '/personal/statement/' + card + '/' + startDateTimestamp + '/' + endDateTimestamp);
       const response = await fetch(mono_url, {
         headers: { 'X-Token': MONO_TOKEN, },
       }).catch((error) => {
@@ -118,6 +119,7 @@ async function fetch_data() {
     } catch (error) {
       console.error(error);
     }
+    return null;
   }
 
   async function fetchActualData(startDateIso, endDateIso) {
@@ -166,6 +168,7 @@ async function fetch_data() {
     } catch (error) {
       console.error(error);
     }
+    return null;
   }
 
   // START
@@ -182,6 +185,7 @@ async function fetch_data() {
   await actualApi.downloadBudget(ACTUAL_SYNC_ID).catch((error) => {
     console.error(error);
   });
+
   // accounts = [
   //     {
   //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
@@ -193,7 +197,7 @@ async function fetch_data() {
   ACTUAL_ACCOUNTS = await actualApi.getAccounts().catch((error) => {
     console.error(error);
   });
-  console.log("actual accounts " + JSON.stringify(ACTUAL_ACCOUNTS));
+  console.log("actual accounts " + JSON.stringify(ACTUAL_ACCOUNTS, null, 4));
 
   let endDate = new Date();
   endDate.setHours(0, 0, 0, 0);
@@ -250,7 +254,6 @@ async function fetch_data() {
 
           if (transactions.length > 0) {
             console.log("adding " + transactions.length + " transactions");
-            console.log("transactions")
             console.log(transactions)
             console.log("end transactions")
             let result = await actualApi.importTransactions(data.actual_card, transactions).catch((error) => {
@@ -277,14 +280,3 @@ async function fetch_data() {
 (async () => {
   await fetch_data();
 })()
-
-if (USE_NODE_CRON) {
-  console.log("Starting cron");
-  var cron = require('node-cron');
-
-  const CRON_ONCE_PER_HOUR = '0 * * * *';
-  // shedule fetch data for later
-  cron.schedule(CRON_ONCE_PER_HOUR, async () => {
-    await fetch_data();
-  });
-}
