@@ -10,7 +10,6 @@ const MONO_TOKEN = process.env.MONO_TOKEN;
 const ACTUAL_URL = process.env.ACTUAL_URL;
 const ACTUAL_PASSWORD = process.env.ACTUAL_PASSWORD;
 const ACTUAL_SYNC_ID = process.env.ACTUAL_SYNC_ID;
-const USE_NODE_CRON = process.env.USE_NODE_CRON;
 let ACTUAL_ACCOUNTS = []
 
 function create_cache_dir() {
@@ -187,8 +186,6 @@ async function fetch_data() {
     console.error(error);
   });
 
-  await actualApi.sync()
-
   // accounts = [
   //     {
   //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
@@ -276,8 +273,6 @@ async function fetch_data() {
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
   }
 
-  await actualApi.sync()
-
   await actualApi.shutdown();
 };
 
@@ -286,13 +281,3 @@ async function fetch_data() {
   await fetch_data();
 })()
 
-if (USE_NODE_CRON) {
-  console.log("Starting cron");
-  var cron = require('node-cron');
-
-  const CRON_ONCE_PER_HOUR = '0 * * * *';
-  // shedule fetch data for later
-  cron.schedule(CRON_ONCE_PER_HOUR, async () => {
-    await fetch_data();
-  });
-}
