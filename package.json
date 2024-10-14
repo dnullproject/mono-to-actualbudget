@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@actual-app/api": "^24.10.0",
+    "@actual-app/api": "^24.10.1",
     "node-cron": "^3.0.3"
   }
 }
