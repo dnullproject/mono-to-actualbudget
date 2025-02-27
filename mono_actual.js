@@ -186,6 +186,8 @@ async function fetch_data() {
     console.error(error);
   });
 
+  await actualApi.sync()
+
   // accounts = [
   //     {
   //       "id":"19525deb-b8d8-4681-af43-69ddc3d7110e",
@@ -273,6 +275,7 @@ async function fetch_data() {
     TOTAL_DAYS_SYNC -= DEFAULT_DAYS_SYNC;
   }
 
+  await actualApi.sync()
   await actualApi.shutdown();
 };
 
