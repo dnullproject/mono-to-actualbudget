@@ -21,7 +21,6 @@ needs
 | ACTUAL_PASSWORD | Password for ActualBudget server |
 | ACTUAL_SYNC_ID | Special ID for ActualServer, can be found under Settings -> Advanced Settings -> Sync ID |
 | DAYS_TO_SYNC | How many days need to be synced from now. If count of days bigger than 7, this Service will sync data by 7 days till the end data |
-| USE_NODE_CRON | Determines if container will use internal cron or it will closes after synchronising data |
 | MONO_TOKEN | Token to your monobank account |
 | MONO_CARD_N | N means any numeric value, from 0 and incrementing by 1(like: MONO_CARD_0, MONO_CARD_1 ...). Its value is a pair of monobank card and actual budget id or name in form MONO_CARD:ACTUAL_ID or MONO_CARD:ACTUAL_NAME |
 
